@@ -4,6 +4,8 @@ import { getVehicles, sendLocation } from './api';
 import * as utils from './utils';
 import { config } from './config';
 
+console.log(config)
+
 // Simulation constants
 const UPDATE_INTERVAL = config.updateInterval;
 const MIN_SPEED = config.minSpeed;
