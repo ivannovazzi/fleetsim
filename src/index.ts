@@ -152,13 +152,7 @@ class VehicleManager {
 
   async start(numVehicles: number = 10) {
     const vehicles = await getVehicles();
-    const medical = vehicles.filter(utils.isMedical);
-
-    // split vehicles by status: onshift, online, offline, untracked
-    const onShift = medical.filter(utils.isOnShift);
-    const online = medical.filter(utils.isOnline);
-    const offline = medical.filter(utils.isOffline);
-    const untracked = medical.filter(utils.isUntracked);
+    const { onShift, online, offline, untracked } = utils.logVehicleStatuses(vehicles);
 
     // add all onshift, add all online, all some offline
     for (const vehicle of onShift) {
@@ -173,10 +167,8 @@ class VehicleManager {
     for (let i = 0; i < 10; i++) {
       this.addVehicle(untracked[i].id, untracked[i].callsign);
     }
-    
 
-
-    
+    console.log(`Starting simulation with ${this.vehicles.size} vehicles\n`);
     setInterval(() => this.updateAll(), UPDATE_INTERVAL);
   }
 

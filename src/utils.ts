@@ -27,6 +27,25 @@ export function isUntracked(vehicle: Vehicle) {
   return vehicle._trackingType === "UNTRACKED";
 }
 
+export const logVehicleStatuses = (vehicles: Vehicle[]) => {
+  const medical = vehicles.filter(isMedical);
+  const onShift = medical.filter(isOnShift);
+  const online = medical.filter(isOnline);
+  const offline = medical.filter(isOffline);
+  const untracked = medical.filter(isUntracked);
+
+  console.log('\n=== Vehicle Status Summary ===');
+  console.log(`Total Medical Vehicles: ${medical.length}`);
+  console.log(`On Shift: ${onShift.length}`);
+  console.log('- ' + onShift.map(v => v.callsign).join(', '));
+  console.log(`Online: ${online.length}`);
+  console.log('- ' + online.map(v => v.callsign).join(', '));
+  console.log(`Offline: ${offline.length}`);
+  console.log(`Untracked: ${untracked.length}`);
+  console.log('===========================\n');
+
+  return { medical, onShift, online, offline, untracked };
+};
 
 export function calculateBearing(start: [number, number], end: [number, number]): number {
   const [lat1, lon1] = start.map(x => x * Math.PI / 180);
