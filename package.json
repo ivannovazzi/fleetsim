@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "geojson": "^0.5.0",
+    "graphql-request": "^7.1.2",
+    "leaflet": "^1.9.4",
+    "tsx": "^4.19.2"
+  },
+  "name": "openampper",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "tsx src/index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/geojson": "^7946.0.15",
+    "@types/node": "^22.10.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}
