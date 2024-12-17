@@ -4,8 +4,6 @@ import { getVehicles, sendLocation } from './api';
 import * as utils from './utils';
 import { config } from './config';
 
-console.log(config)
-
 // Simulation constants
 const UPDATE_INTERVAL = config.updateInterval;
 const MIN_SPEED = config.minSpeed;
@@ -177,7 +175,6 @@ class VehicleManager {
     }
 
     utils.logVehicleStatuses(vehicles);
-
     setInterval(() => this.updateAll(), UPDATE_INTERVAL);
   }
 
@@ -279,5 +276,6 @@ class VehicleManager {
 // Start simulation
 const network = new RoadNetwork(config.geojsonPath);
 const vehicleManager = new VehicleManager(network);
+
 vehicleManager.start(config.defaultVehicles);
 

@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const config = {
-  token: "",
+  token: process.env.TOKEN,
   apiUrl: "https://graphql-dev.flaredispatch.com/graphql",
   updateInterval: Number(process.env.UPDATE_INTERVAL) || 5000,
   minSpeed: Number(process.env.MIN_SPEED) || 20,

@@ -1,6 +1,7 @@
 declare namespace NodeJS {
   interface ProcessEnv {
     NODE_ENV: 'development' | 'production' | 'test';
+    TOKEN: string;
     UPDATE_INTERVAL: string;
     MIN_SPEED: string;
     MAX_SPEED: string;
