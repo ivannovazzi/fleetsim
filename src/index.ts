@@ -7,8 +7,6 @@ import { SimulationController } from './modules/SimulationController';
 import { config, verifyConfig } from './utils/config';
 import bodyParser from 'body-parser';
 
-
-
 verifyConfig();
 
 const app = express();
@@ -40,7 +38,7 @@ app.post('/reset', (req, res) => {
 });
 
 app.post('/direction', async (req, res) => {
-  await simulationController.startDirection(req.body);
+  await simulationController.setDirections(req.body);
   res.json({ status: 'direction' });
 });
 
@@ -78,8 +76,8 @@ wss.on('connection', (ws) => {
   const optionsUpdateHandler = (options: any) => {
     ws.send(JSON.stringify({ type: 'options', data: options }));
   }  
-  const vehicleUpdateHandler = (vehicles: any) => {
-    ws.send(JSON.stringify({ type: 'vehicles', data: vehicles }));
+  const vehicleUpdateHandler = (vehicle: any) => {
+    ws.send(JSON.stringify({ type: 'vehicle', data: vehicle }));
   };
   const statusUpdateHandler = (data: any) => {
     ws.send(JSON.stringify({ type: 'status', data }));

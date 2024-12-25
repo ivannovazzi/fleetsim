@@ -9,32 +9,52 @@ export class SimulationController extends EventEmitter {
 
   getStatus(): SimulationStatus {
     return {
-      interval: this.vehicleManager.getInterval(),
+      interval: this.vehicleManager.getOptions().updateInterval,
       running: this.vehicleManager.isRunning(),
-      vehicleCount: this.vehicleManager.getVehicleCount(),
       vehicles: this.vehicleManager.getVehicles()
     };
   }
 
-  async start(options: StartOptions): Promise<void> {
-    await this.vehicleManager.start(options);
+  public getInterval(): number {
+    return this.vehicleManager.getOptions().updateInterval;
+  }
+
+  async start(options: Partial<StartOptions>): Promise<void> {
+    // Apply new settings
+    this.vehicleManager.setOptions(options);
+
+    // Retrieve the current update interval
+    const intervalMs = this.vehicleManager.getOptions().updateInterval;
+
+    for (const v of this.vehicleManager.getVehicles()) {
+      this.vehicleManager.startVehicleMovement(v.id, intervalMs);
+    }
+
+    if (this.vehicleManager.getOptions().updateServer) {
+      this.vehicleManager.startLocationUpdates(intervalMs);
+    }
+
     this.emit('updateStatus', this.getStatus());    
   }
 
-  async startDirection(
+  async setDirections(
     requests: DirectionRequest[]
   ): Promise<void> {
     for (const request of requests) {
       const { id, lat, lng } = request;
-      await this.vehicleManager.moveToDestination(id, [lat, lng]);
+      await this.vehicleManager.findAndSetRoutes(id, [lat, lng]);
     }
-    await this.vehicleManager.startRoute(requests.map((r) => r.id));
     this.emit('updateStatus', this.getStatus());
   }  
 
 
-  stop(): void {
-    this.vehicleManager.stop();
+  public stop(): void {
+    // Stops movement for all vehicles
+    for (const v of this.vehicleManager.getVehicles()) {
+      this.vehicleManager.stopVehicleMovement(v.id);
+    }
+    // Stop global location updates
+    this.vehicleManager.stopLocationUpdates();
     this.emit('updateStatus', this.getStatus());
   }
 

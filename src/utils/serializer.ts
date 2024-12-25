@@ -1,4 +1,3 @@
-import { stat } from 'fs';
 import { Vehicle, VehicleDTO } from '../types';
 
 export function serializeVehicle(vehicle: Vehicle): VehicleDTO {

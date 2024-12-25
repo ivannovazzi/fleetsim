@@ -32,7 +32,7 @@ export interface Edge {
 export interface Vehicle {
   id: string;
   name: string;
-  status: string;
+  status: VehicleStatus;
   currentEdge: Edge;
   position: [number, number];
   speed: number;
@@ -60,7 +60,6 @@ export interface VehicleDTO {
 export interface SimulationStatus {
   interval: number;
   running: boolean;
-  vehicleCount: number;
   vehicles: VehicleDTO[];
 }
 
