@@ -1,14 +1,14 @@
 declare namespace NodeJS {
   interface ProcessEnv {
-    NODE_ENV: 'development' | 'production' | 'test';
     TOKEN: string;
+    API_URL: string;
     UPDATE_INTERVAL: string;
     MIN_SPEED: string;
     MAX_SPEED: string;
     ACCELERATION: string;
     DECELERATION: string; 
     TURN_THRESHOLD: string;
-    GEOJSON_PATH: string;
     DEFAULT_VEHICLES: string;
+    GEOJSON_PATH: string;
   }
 }

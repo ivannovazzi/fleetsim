@@ -1,28 +1,30 @@
 import { gql } from "graphql-request";
 import client from "./client";
-import { Vehicle } from "./types";
+import { ApiVehicleModel, Vehicle } from "../types";
 
 const SEND_LOCATION_MUTATION = gql`
-  mutation SendLocation(
-    $latitude: Float!
-    $longitude: Float!
-    $vehicleId: UUID!
-  ) {
-    upsertVehicles(
-      input: {
-        vehicle: { id: $vehicleId, latitude: $latitude, longitude: $longitude }
+  mutation SendLocation($input: UpsertVehiclesInput!) {
+    upsertVehicles(input: $input) {
+      vehicles {
+        callsign
+        latitude
+        longitude
       }
-    ) {
       clientMutationId
     }
   }
 `;
 
-export async function sendLocation(lat: number, lon: number, id: string): Promise<void> {
-  try {
-    const variables = { latitude: lat, longitude: lon, vehicleId: id };
+interface Update {
+  latitude: number;
+  longitude: number;
+  id: string;
+}
 
-    const r = await client.request(SEND_LOCATION_MUTATION, variables);
+export async function sendLocation(updates: Update[]): Promise<void> {
+  try {
+    const variables = { input: { vehicle: updates } };
+    await client.request(SEND_LOCATION_MUTATION, variables);
   } catch (error) {
     console.error("Error sending location:", error);
   }
@@ -31,7 +33,7 @@ export async function sendLocation(lat: number, lon: number, id: string): Promis
 const GET_VEHICLES_QUERY = gql`
   query {
     vehicles {
-      nodes {    
+      nodes {
         id
         callsign
         isOnline
@@ -47,10 +49,10 @@ const GET_VEHICLES_QUERY = gql`
   }
 `;
 
-export async function getVehicles(): Promise<Vehicle[]> {
+export async function getVehicles(): Promise<ApiVehicleModel[]> {
   try {
     const response = await client.request<{
-      vehicles: { nodes: Vehicle[] };
+      vehicles: { nodes: ApiVehicleModel[] };
     }>(GET_VEHICLES_QUERY);
     return response.vehicles.nodes;
   } catch (error) {
