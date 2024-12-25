@@ -104,8 +104,9 @@ export class VehicleManager extends EventEmitter {
     const vehicleIds = Array.from(this.vehicles.keys()).slice(0, this.options.defaultVehicles);
     this.interval = setInterval(() => this.updateAll(vehicleIds), this.options.updateInterval);
   }
-  public async startRoute(id: string): Promise<void> {
-    this.interval = setInterval(() => this.updateAll([id]), this.options.updateInterval);
+  public async startRoute(ids: string[]): Promise<void> {
+    console.log('Starting route for vehicles:', ids);
+    this.interval = setInterval(() => this.updateAll(ids), this.options.updateInterval);
   }
 
   public stop(): void {

@@ -40,7 +40,7 @@ app.post('/reset', (req, res) => {
 });
 
 app.post('/direction', async (req, res) => {
-  await simulationController.startDirection([req.body.lat, req.body.lng]);
+  await simulationController.startDirection(req.body.ids, [req.body.lat, req.body.lng]);
   res.json({ status: 'direction' });
 });
 

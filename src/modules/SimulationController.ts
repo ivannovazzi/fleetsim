@@ -22,10 +22,13 @@ export class SimulationController extends EventEmitter {
   }
 
   async startDirection(
+    ids: string[],
     dest: [number, number]
   ): Promise<void> {
-    await this.vehicleManager.moveToDestination('e7d5b5e8-ab2f-11ef-a458-097318303bfc', dest);
-    await this.vehicleManager.startRoute("e7d5b5e8-ab2f-11ef-a458-097318303bfc");
+    for (const id of ids) {
+      await this.vehicleManager.moveToDestination(id, dest);
+    }
+    await this.vehicleManager.startRoute(ids);
     this.emit('updateStatus', this.getStatus());
   }  
 
