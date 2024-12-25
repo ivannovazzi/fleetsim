@@ -3,8 +3,7 @@ import {
   Edge,
   VehicleDTO,
   Route,
-  Node,
-  ApiVehicleModel,
+  VehicleRoute,
   StartOptions,
 } from "../types";
 import { RoadNetwork } from "./RoadNetwork";
@@ -303,22 +302,9 @@ export class VehicleManager extends EventEmitter {
       return;
     }
 
-    function cloneAndRemoveAllRouteEdgesNodesConnections(route: Route) {
-      return {
-        ...route,
-        edges: route.edges.map((edge) => ({
-          ...edge,
-          start: { ...edge.start, connections: [] },
-          end: { ...edge.end, connections: [] },
-        })),
-      };
-    }
-
     this.emit("route", {
       vehicleId,
-      route: cloneAndRemoveAllRouteEdgesNodesConnections(route),
-      from: startNode.coordinates,
-      to: endNode.coordinates,
+      route: utils.nonCircularRouteEdges(route),      
     });
 
     console.log("Route found:", {
@@ -345,5 +331,13 @@ export class VehicleManager extends EventEmitter {
 
   public getVehicles(): VehicleDTO[] {
     return Array.from(this.vehicles.values()).map(serializeVehicle);
+  }
+
+  public getRoutes(): VehicleRoute[] {
+    
+    return Array.from(this.routes.entries()).map(([id, route]) => ({
+      vehicleId: id,
+      route: utils.nonCircularRouteEdges(route),
+    }));
   }
 }

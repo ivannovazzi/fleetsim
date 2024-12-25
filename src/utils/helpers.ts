@@ -1,4 +1,4 @@
-import { ApiVehicleModel, VehicleStatus } from "../types";
+import { ApiVehicleModel, Route, VehicleStatus } from "../types";
 
 export function isMedical(vehicle: ApiVehicleModel) {
   return [
@@ -78,3 +78,14 @@ export function calculateDistance(p1: [number, number], p2: [number, number]): n
   
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
+
+export function nonCircularRouteEdges(route: Route): Route {
+      return {
+        ...route,
+        edges: route.edges.map((edge) => ({
+          ...edge,
+          start: { ...edge.start, connections: [] },
+          end: { ...edge.end, connections: [] },
+        })),
+      };
+    }

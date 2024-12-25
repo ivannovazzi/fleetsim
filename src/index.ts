@@ -62,6 +62,10 @@ app.get("/roads", (req, res) => {
   res.json(network.getFeatures());
 });
 
+app.get("/routes", (req, res) => {
+  res.json(vehicleManager.getRoutes());
+});
+
 
 // WebSocket server
 const wss = new WebSocketServer({ port: 8080 });

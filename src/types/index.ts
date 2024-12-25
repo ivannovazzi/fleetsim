@@ -92,3 +92,8 @@ export interface DirectionRequest {
   lat: number;
   lng: number;
 }
+
+export interface VehicleRoute {
+  vehicleId: string;
+  route: Route;
+}
