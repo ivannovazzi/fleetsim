@@ -1,5 +1,5 @@
-import { StartOptions, VehicleManager } from './VehicleManager';
-import { SimulationStatus } from '../types';
+import { VehicleManager } from './VehicleManager';
+import { DirectionRequest, SimulationStatus, StartOptions } from '../types';
 import EventEmitter from 'events';
 
 export class SimulationController extends EventEmitter {
@@ -22,13 +22,13 @@ export class SimulationController extends EventEmitter {
   }
 
   async startDirection(
-    ids: string[],
-    dest: [number, number]
+    requests: DirectionRequest[]
   ): Promise<void> {
-    for (const id of ids) {
-      await this.vehicleManager.moveToDestination(id, dest);
+    for (const request of requests) {
+      const { id, lat, lng } = request;
+      await this.vehicleManager.moveToDestination(id, [lat, lng]);
     }
-    await this.vehicleManager.startRoute(ids);
+    await this.vehicleManager.startRoute(requests.map((r) => r.id));
     this.emit('updateStatus', this.getStatus());
   }  
 

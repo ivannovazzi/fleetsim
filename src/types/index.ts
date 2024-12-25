@@ -74,3 +74,21 @@ export interface Route {
   edges: Edge[];
   distance: number;
 }
+
+export interface StartOptions {
+  updateInterval: number;
+  minSpeed: number;
+  maxSpeed: number;
+  acceleration: number;
+  deceleration: number;
+  turnThreshold: number;
+  defaultVehicles: number;
+  updateServer: boolean;
+}
+
+
+export interface DirectionRequest {
+  id: string;
+  lat: number;
+  lng: number;
+}

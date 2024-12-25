@@ -1,21 +1,18 @@
-import { Vehicle, Edge, VehicleDTO, Route, Node, ApiVehicleModel } from '../types';
-import { RoadNetwork } from './RoadNetwork';
-import { getVehicles, sendLocation } from '../utils/api';
-import * as utils from '../utils/helpers';
-import { config } from '../utils/config';
-import { EventEmitter } from 'events';
-import { serializeVehicle } from '../utils/serializer';
-
-export interface StartOptions {
-  updateInterval: number;
-  minSpeed: number;
-  maxSpeed: number;
-  acceleration: number;
-  deceleration: number;
-  turnThreshold: number;
-  defaultVehicles: number;
-  updateServer: boolean;
-}
+import {
+  Vehicle,
+  Edge,
+  VehicleDTO,
+  Route,
+  Node,
+  ApiVehicleModel,
+  StartOptions,
+} from "../types";
+import { RoadNetwork } from "./RoadNetwork";
+import { getVehicles, sendLocation } from "../utils/api";
+import * as utils from "../utils/helpers";
+import { config } from "../utils/config";
+import { EventEmitter } from "events";
+import { serializeVehicle } from "../utils/serializer";
 
 export class VehicleManager extends EventEmitter {
   private vehicles: Map<string, Vehicle> = new Map();
@@ -32,7 +29,7 @@ export class VehicleManager extends EventEmitter {
     turnThreshold: config.turnThreshold,
     defaultVehicles: config.defaultVehicles,
     updateServer: config.updateServer,
-  }
+  };
   private routes: Map<string, Route> = new Map();
 
   constructor(private network: RoadNetwork) {
@@ -49,12 +46,7 @@ export class VehicleManager extends EventEmitter {
     const offline = medical.filter(utils.isOffline);
     const untracked = medical.filter(utils.isUntracked);
 
-    const ordered = [
-      ...onShift,
-      ...online,
-      ...offline,
-      ...untracked
-    ]
+    const ordered = [...onShift, ...online, ...offline, ...untracked];
 
     for (const vehicle of ordered) {
       this.addVehicle(vehicle.id, vehicle.callsign, utils.getStatus(vehicle));
@@ -71,7 +63,7 @@ export class VehicleManager extends EventEmitter {
       position: startEdge.start.coordinates,
       speed: this.options.minSpeed,
       bearing: startEdge.bearing,
-      progress: 0
+      progress: 0,
     };
 
     this.vehicles.set(id, vehicle);
@@ -98,21 +90,30 @@ export class VehicleManager extends EventEmitter {
     if (this.interval) {
       return;
     }
-    this.options = options;    
+    this.options = options;
 
     // get the ids of the this.options.defaultVehicles first vehicles
-    const vehicleIds = Array.from(this.vehicles.keys()).slice(0, this.options.defaultVehicles);
-    this.interval = setInterval(() => this.updateAll(vehicleIds), this.options.updateInterval);
+    const vehicleIds = Array.from(this.vehicles.keys()).slice(
+      0,
+      this.options.defaultVehicles
+    );
+    this.interval = setInterval(
+      () => this.updateAll(vehicleIds),
+      this.options.updateInterval
+    );
   }
   public async startRoute(ids: string[]): Promise<void> {
-    console.log('Starting route for vehicles:', ids);
-    this.interval = setInterval(() => this.updateAll(ids), this.options.updateInterval);
+    console.log("Starting route for vehicles:", ids);
+    this.interval = setInterval(
+      () => this.updateAll(ids),
+      this.options.updateInterval
+    );
   }
 
   public stop(): void {
     clearInterval(this.interval!);
     this.interval = null;
-    this.lastUpdateTimes.clear();    
+    this.lastUpdateTimes.clear();
   }
 
   public async reset(): Promise<void> {
@@ -127,7 +128,7 @@ export class VehicleManager extends EventEmitter {
 
   public setOptions(options: StartOptions): void {
     this.options = options;
-    this.emit('options', this.options);
+    this.emit("options", this.options);
   }
 
   public getOptions(): StartOptions {
@@ -151,17 +152,22 @@ export class VehicleManager extends EventEmitter {
       }
 
       this.updateVehicle(vehicle);
-      this.lastUpdateTimes.set(id, now);      
+      this.lastUpdateTimes.set(id, now);
     }
     const vehicles = Array.from(this.vehicles.values());
     if (this.options.updateServer) {
-      await sendLocation(vehicles.map(v => ({ latitude: v.position[0], longitude: v.position[1], id: v.id,
-        positionReceivedAt: new Date().toISOString(),
-        positionOriginRefId: 'b13c099c-ab20-11ea-8f69-0673f8c18e22',
-      })));
+      await sendLocation(
+        vehicles.map((v) => ({
+          latitude: v.position[0],
+          longitude: v.position[1],
+          id: v.id,
+          positionReceivedAt: new Date().toISOString(),
+          positionOriginRefId: "b13c099c-ab20-11ea-8f69-0673f8c18e22",
+        }))
+      );
     }
 
-    this.emit('update', this.getVehicles());
+    this.emit("update", this.getVehicles());
   }
 
   private updateVehicle(vehicle: Vehicle): void {
@@ -178,15 +184,24 @@ export class VehicleManager extends EventEmitter {
   private updateSpeed(vehicle: Vehicle): void {
     const nextEdge = this.getNextEdge(vehicle);
     if (!nextEdge) {
-      vehicle.speed = Math.max(this.options.minSpeed, vehicle.speed - this.options.deceleration);
+      vehicle.speed = Math.max(
+        this.options.minSpeed,
+        vehicle.speed - this.options.deceleration
+      );
       return;
     }
 
     const bearingDiff = Math.abs(nextEdge.bearing - vehicle.bearing);
     if (bearingDiff > this.options.turnThreshold) {
-      vehicle.speed = Math.max(this.options.minSpeed, vehicle.speed - this.options.deceleration);
+      vehicle.speed = Math.max(
+        this.options.minSpeed,
+        vehicle.speed - this.options.deceleration
+      );
     } else {
-      vehicle.speed = Math.min(this.options.maxSpeed, vehicle.speed + this.options.acceleration);
+      vehicle.speed = Math.min(
+        this.options.maxSpeed,
+        vehicle.speed + this.options.acceleration
+      );
     }
   }
 
@@ -199,15 +214,16 @@ export class VehicleManager extends EventEmitter {
         ...currentEdge,
         start: currentEdge.end,
         end: currentEdge.start,
-        bearing: (currentEdge.bearing + 180) % 360
+        bearing: (currentEdge.bearing + 180) % 360,
       };
     }
 
     const unvisitedEdges = possibleEdges.filter(
-      e => !this.visitedEdges.get(vehicle.id)?.has(e.id)
+      (e) => !this.visitedEdges.get(vehicle.id)?.has(e.id)
     );
     if (unvisitedEdges.length > 0) {
-      const nextEdge = unvisitedEdges[Math.floor(Math.random() * unvisitedEdges.length)];
+      const nextEdge =
+        unvisitedEdges[Math.floor(Math.random() * unvisitedEdges.length)];
       this.visitedEdges.get(vehicle.id)?.add(nextEdge.id);
       return nextEdge;
     }
@@ -216,7 +232,8 @@ export class VehicleManager extends EventEmitter {
   }
 
   private updatePosition(vehicle: Vehicle): void {
-    const distanceToMove = (vehicle.speed * this.options.updateInterval) / (3600 * 1000);
+    const distanceToMove =
+      (vehicle.speed * this.options.updateInterval) / (3600 * 1000);
     vehicle.progress += distanceToMove / vehicle.currentEdge.distance;
 
     if (vehicle.progress >= 1) {
@@ -239,11 +256,14 @@ export class VehicleManager extends EventEmitter {
   }
 
   private updatePositionOnRoute(vehicle: Vehicle, route: Route): void {
-    const distanceToMove = (vehicle.speed * this.options.updateInterval) / (3600 * 1000);
+    const distanceToMove =
+      (vehicle.speed * this.options.updateInterval) / (3600 * 1000);
     vehicle.progress += distanceToMove / vehicle.currentEdge.distance;
 
     if (vehicle.progress >= 1) {
-      const currentIndex = route.edges.findIndex(e => e.id === vehicle.currentEdge.id);
+      const currentIndex = route.edges.findIndex(
+        (e) => e.id === vehicle.currentEdge.id
+      );
       if (currentIndex < route.edges.length - 1) {
         vehicle.currentEdge = route.edges[currentIndex + 1];
         vehicle.progress = 0;
@@ -260,18 +280,15 @@ export class VehicleManager extends EventEmitter {
     vehicle.bearing = vehicle.currentEdge.bearing;
   }
 
-  public async moveToDestination(vehicleId: string, destination: [number, number]): Promise<void> {
+  public async moveToDestination(
+    vehicleId: string,
+    destination: [number, number]
+  ): Promise<void> {
     const vehicle = this.vehicles.get(vehicleId);
     if (!vehicle) throw new Error(`Vehicle ${vehicleId} not found`);
 
     const endNode = this.network.findNearestNode(destination);
     const startNode = this.network.findNearestNode(vehicle.position);
-    this.emit('route', { 
-      from: startNode.coordinates,
-      to: endNode.coordinates,
-     });
-    
-    // Verify nodes have connections
     if (startNode.connections.length === 0) {
       throw new Error(`Start node ${startNode.id} has no connections`);
     }
@@ -279,21 +296,34 @@ export class VehicleManager extends EventEmitter {
       throw new Error(`End node ${endNode.id} has no connections`);
     }
 
-    const route = this.network.findRoute(startNode, endNode);    
-    
+    const route = this.network.findRoute(startNode, endNode);
+
     if (!route) {
-      console.error('Failed to find route:', {
-        startNodeId: startNode.id,
-        endNodeId: endNode.id,
-        startConnections: startNode.connections.length,
-        endConnections: endNode.connections.length
-      });
+      console.error("Failed to find route");
       return;
     }
 
-    console.log('Route found:', {
+    function cloneAndRemoveAllRouteEdgesNodesConnections(route: Route) {
+      return {
+        ...route,
+        edges: route.edges.map((edge) => ({
+          ...edge,
+          start: { ...edge.start, connections: [] },
+          end: { ...edge.end, connections: [] },
+        })),
+      };
+    }
+
+    this.emit("route", {
+      vehicleId,
+      route: cloneAndRemoveAllRouteEdgesNodesConnections(route),
+      from: startNode.coordinates,
+      to: endNode.coordinates,
+    });
+
+    console.log("Route found:", {
       numEdges: route.edges.length,
-      totalDistance: route.distance
+      totalDistance: route.distance,
     });
 
     this.routes.set(vehicleId, route);
@@ -315,5 +345,5 @@ export class VehicleManager extends EventEmitter {
 
   public getVehicles(): VehicleDTO[] {
     return Array.from(this.vehicles.values()).map(serializeVehicle);
-  }  
+  }
 }
