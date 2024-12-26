@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@turf/turf": "^7.1.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/ws": "^8.5.13",

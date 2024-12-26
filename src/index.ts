@@ -64,6 +64,15 @@ app.get("/routes", (req, res) => {
   res.json(vehicleManager.getRoutes());
 });
 
+app.get("/heatzones", (req, res) => {
+  network.generateHeatedZones({
+    count: 6,
+    minRadius: 1,
+    maxRadius: 5
+  });
+  res.json(network.exportHeatZones());
+});
+
 
 // WebSocket server
 const wss = new WebSocketServer({ port: 8080 });

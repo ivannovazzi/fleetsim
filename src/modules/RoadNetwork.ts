@@ -2,15 +2,40 @@ import fs from 'fs';
 import { FeatureCollection, LineString } from 'geojson';
 import { Node, Edge, Route, PathNode } from '../types';
 import * as utils from '../utils/helpers';
+import * as turf from '@turf/turf';
+import { HeatZoneManager } from './HeatZoneManager';
+import { HeatZone } from './HeatZoneManager';
+
+export interface HeatZoneProperties {
+  id: string;
+  intensity: number;
+  timestamp: string;
+  radius: number;
+}
+
+export interface HeatZoneFeature {
+  type: "Feature";
+  properties: HeatZoneProperties;
+  geometry: {
+    type: "Polygon";
+    coordinates: number[][][];
+  };
+}
+
+export interface PathCost {
+  distance: number;
+}
 
 export class RoadNetwork {
   private nodes: Map<string, Node> = new Map();
   private edges: Map<string, Edge> = new Map();
-  private data: FeatureCollection;
+  private data: FeatureCollection;  
+  private heatPenaltyFactor = 1.5;
+  private heatZoneManager: HeatZoneManager = new HeatZoneManager(this.heatPenaltyFactor);
 
   constructor(geojsonPath: string) {
     this.data = JSON.parse(fs.readFileSync(geojsonPath, 'utf8')) as FeatureCollection;
-    this.buildNetwork(this.data);
+    this.buildNetwork(this.data);    
   }
 
   public getAllRoads(): Edge[] {
@@ -119,53 +144,98 @@ export class RoadNetwork {
     return edge.end.connections.filter(e => e.end.id !== edge.start.id);
   }
 
-  public findRoute(start: Node, end: Node): Route | null {
-    if (!start || !end) {
-      throw new Error('Invalid start or end node');
-    }
+  private bboxesIntersect(a: [number, number, number, number], b: [number, number, number, number]): boolean {
+    // [minX, minY, maxX, maxY]
+    return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+  }
 
+  private calculateEdgeCost(edge: Edge): PathCost {
+    return {
+      distance: edge.distance
+    };
+  }
+
+  public findRoute(start: Node, end: Node): Route | null {
     const openSet = new Map<string, PathNode>();
-    const cameFrom = new Map<string, { prevId: string; edge: Edge }>();
+    const closedSet = new Set<string>();
+    const cameFrom = new Map<string, {prevId: string; edge: Edge}>();
+    
     const gScore = new Map<string, number>();
     const fScore = new Map<string, number>();
 
-    // Initialize scores
+    // Initialize start node
     gScore.set(start.id, 0);
-    fScore.set(start.id, this.calculateHeuristic(start, end));
-    openSet.set(start.id, { id: start.id, gScore: 0, fScore: fScore.get(start.id)! });
+    const initialH = this.calculateHeuristic(start, end);
+    fScore.set(start.id, initialH);
+    
+    openSet.set(start.id, {
+      id: start.id,
+      gScore: 0,
+      fScore: initialH
+    });
 
     while (openSet.size > 0) {
-      const currentId = this.getLowestFScore(openSet).id;
+      const current = this.getLowestFScore(openSet);
       
-      if (currentId === end.id) {
+      if (current.id === end.id) {
         return this.reconstructPath(start.id, end.id, cameFrom);
       }
 
-      openSet.delete(currentId);
-      const current = this.nodes.get(currentId)!;
+      openSet.delete(current.id);
+      closedSet.add(current.id);
 
-      // Explore all connections from current node
-      for (const edge of current.connections) {
-        const neighbor = edge.end;
-        const tentativeGScore = gScore.get(currentId)! + edge.distance;
+      const currentNode = this.nodes.get(current.id)!;
+      
+      for (const edge of currentNode.connections) {
+        if (closedSet.has(edge.end.id)) continue;
 
-        if (!gScore.has(neighbor.id) || tentativeGScore < gScore.get(neighbor.id)!) {
-          cameFrom.set(neighbor.id, { prevId: currentId, edge });
-          gScore.set(neighbor.id, tentativeGScore);
-          fScore.set(neighbor.id, tentativeGScore + this.calculateHeuristic(neighbor, end));
+        const edgeCost = this.calculateEdgeCost(edge);
+        const currentCost = gScore.get(current.id)!;
+        
+        const tentativeCost = currentCost + edgeCost.distance;
+
+        const existingCost = gScore.get(edge.end.id);
+        
+        if (!existingCost || tentativeCost < existingCost) {
+          cameFrom.set(edge.end.id, { prevId: current.id, edge });
+          gScore.set(edge.end.id, tentativeCost);
           
-          if (!openSet.has(neighbor.id)) {
-            openSet.set(neighbor.id, {
-              id: neighbor.id,
-              gScore: gScore.get(neighbor.id)!,
-              fScore: fScore.get(neighbor.id)!
-            });
-          }
+          const h = this.calculateHeuristic(edge.end, end);
+          const f = tentativeCost + h;
+          fScore.set(edge.end.id, f);
+
+          openSet.set(edge.end.id, {
+            id: edge.end.id,
+            gScore: tentativeCost,
+            fScore: f
+          });
         }
       }
     }
 
     return null;
+  }
+
+  private reconstructPath(
+    startId: string,
+    endId: string,
+    cameFrom: Map<string, {prevId: string; edge: Edge}>
+  ): Route {
+    const path: Edge[] = [];
+    let currentId = endId;
+    let totalDistance = 0;
+
+    while (currentId !== startId) {
+      const { prevId, edge } = cameFrom.get(currentId)!;
+      path.unshift(edge);
+      totalDistance += edge.distance;
+      currentId = prevId;
+    }
+
+    return {
+      edges: path,
+      distance: totalDistance
+    };
   }
 
   private calculateHeuristic(from: Node, to: Node): number {
@@ -181,23 +251,46 @@ export class RoadNetwork {
     }
     return lowest!;
   }
+  
+  public generateHeatedZones(options: {
+    count?: number;
+    minRadius?: number;
+    maxRadius?: number;
+    minIntensity?: number;
+    maxIntensity?: number;
+  } = {}): void {
+    const bounds = this.getNetworkBounds();
+    this.heatZoneManager.generateHeatedZones(bounds, options);
+  }
 
-  private reconstructPath(
-    startId: string, 
-    endId: string, 
-    cameFrom: Map<string, { prevId: string; edge: Edge }>
-  ): Route {
-    const path: Edge[] = [];
-    let currentId = endId;
-    let totalDistance = 0;
+  /**
+   * Exports heat zones as GeoJSON FeatureCollection
+   */
+  public exportHeatZones(): string[] {
+    return this.heatZoneManager.exportHeatedZonesAsPaths();
+  }
 
-    while (currentId !== startId) {
-      const { prevId, edge } = cameFrom.get(currentId)!;
-      path.unshift(edge);
-      totalDistance += edge.distance;
-      currentId = prevId;
-    }
+  private getNetworkBounds(): [[number, number], [number, number]] {
+    const nodes = this.getAllNodes();
+    let minLat = Infinity, maxLat = -Infinity;
+    let minLon = Infinity, maxLon = -Infinity;
 
-    return { edges: path, distance: totalDistance };
-  } 
+    nodes.forEach(node => {
+      const [lat, lon] = node.coordinates;
+      minLat = Math.min(minLat, lat);
+      maxLat = Math.max(maxLat, lat);
+      minLon = Math.min(minLon, lon);
+      maxLon = Math.max(maxLon, lon);
+    });
+
+    return [[minLat, minLon], [maxLat, maxLon]];
+  }
+
+  private getRandomPointInBounds(bounds: [[number, number], [number, number]]): [number, number] {
+    const [[minLat, minLon], [maxLat, maxLon]] = bounds;
+    return [
+      minLat + Math.random() * (maxLat - minLat),
+      minLon + Math.random() * (maxLon - minLon)
+    ];
+  }
 }
