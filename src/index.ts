@@ -68,7 +68,7 @@ app.post("/heatzones", (req, res) => {
   network.generateHeatedZones({
     count: 16,
     minRadius: 0.3,
-    maxRadius: 2,
+    maxRadius: 1,
     minIntensity: 0.3,
     maxIntensity: 1
   });

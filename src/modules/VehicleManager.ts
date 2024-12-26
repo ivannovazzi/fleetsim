@@ -38,6 +38,7 @@ export class VehicleManager extends EventEmitter {
     updateInterval: config.updateInterval,
     minSpeed: config.minSpeed,
     maxSpeed: config.maxSpeed,
+    speedVariation: config.speedVariation,
     acceleration: config.acceleration,
     deceleration: config.deceleration,
     turnThreshold: config.turnThreshold,
@@ -55,8 +56,7 @@ export class VehicleManager extends EventEmitter {
    * Init: fetches initial vehicles and populates the map.
    */
   private async init(): Promise<void> {
-    const vehiclesData = await getVehicles();
-    // Filter and sort logic for your own use case
+    const vehiclesData = await getVehicles();    
     const medical = vehiclesData.filter(utils.isMedical);
     const onShift = medical.filter(utils.isOnShift);
     const online = medical.filter(utils.isOnline);
@@ -111,8 +111,7 @@ export class VehicleManager extends EventEmitter {
    * Starts a movement interval for the specified vehicle with a given update interval.
    */
   public startVehicleMovement(vehicleId: string, intervalMs: number): void {
-    if (this.vehicleIntervals.has(vehicleId)) {
-      // Already running, clear it first
+    if (this.vehicleIntervals.has(vehicleId)) {      
       clearInterval(this.vehicleIntervals.get(vehicleId)!);
     }
     this.vehicleIntervals.set(
@@ -196,13 +195,14 @@ export class VehicleManager extends EventEmitter {
    */
   private updateVehicle(vehicle: Vehicle): void {
     const route = this.routes.get(vehicle.id);
+        
+    this.updateSpeed(vehicle);
+    
     if (route && route.edges.length > 0) {
-      this.updateSpeed(vehicle);
       this.updatePositionOnRoute(vehicle, route);
     } else {
-      this.updateSpeed(vehicle);
       this.updatePosition(vehicle);
-    }
+    }    
   }
 
   /**
@@ -217,8 +217,7 @@ export class VehicleManager extends EventEmitter {
       );
       return;
     }
-
-    // Check if vehicle is in heat zone
+    
     const isInHeatZone = this.network.isPositionInHeatZone(vehicle.position);
     const speedFactor = isInHeatZone ? this.options.heatZoneSpeedFactor : 1;
 
@@ -245,10 +244,13 @@ export class VehicleManager extends EventEmitter {
   ): number {
     const minSpeed = this.options.minSpeed;
     const maxSpeed = this.options.maxSpeed;
-    return Math.min(
-      maxSpeed,
-      Math.max(minSpeed, (speed - increase) * speedFactor)
-    );
+        
+    const baseSpeed = Math.min(maxSpeed, Math.max(minSpeed, (speed - increase) * speedFactor));
+        
+    const variation = this.options.speedVariation;
+    const randomFactor = 1 + (Math.random() * variation * 2 - variation);
+        
+    return Math.min(maxSpeed, Math.max(minSpeed, baseSpeed * randomFactor));
   }
 
   /**
@@ -257,16 +259,14 @@ export class VehicleManager extends EventEmitter {
   private getNextEdge(vehicle: Vehicle): Edge {
     const currentEdge = vehicle.currentEdge;
     const possibleEdges = this.network.getConnectedEdges(currentEdge);
-    if (possibleEdges.length === 0) {
-      // Turn around
+    if (possibleEdges.length === 0) {      
       return {
         ...currentEdge,
         start: currentEdge.end,
         end: currentEdge.start,
         bearing: (currentEdge.bearing + 180) % 360,
       };
-    }
-    // Avoid revisiting the same edges
+    }    
     const unvisitedEdges = possibleEdges.filter(
       (e) => !this.visitedEdges.get(vehicle.id)?.has(e.id)
     );
