@@ -84,6 +84,7 @@ export interface StartOptions {
   heatZoneSpeedFactor: number;
   defaultVehicles: number;
   updateServer: boolean;
+  speedVariation: number;  // percentage of speed variation (0-1)
 }
 
 

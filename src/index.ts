@@ -64,7 +64,7 @@ app.get("/routes", (req, res) => {
   res.json(vehicleManager.getRoutes());
 });
 
-app.get("/heatzones", (req, res) => {
+app.post("/heatzones", (req, res) => {
   network.generateHeatedZones({
     count: 16,
     minRadius: 0.3,
@@ -72,6 +72,10 @@ app.get("/heatzones", (req, res) => {
     minIntensity: 0.3,
     maxIntensity: 1
   });
+  res.json({ status: 'heatzones generated' });
+});
+
+app.get("/heatzones", (req, res) => {
   res.json(network.exportHeatZones());
 });
 
@@ -81,6 +85,10 @@ const wss = new WebSocketServer({ port: 8080 });
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
+
+  const heatzonesHandler = (heatzones: any) => {
+    ws.send(JSON.stringify({ type: 'heatzones', data: heatzones }));
+  }
   const routeHandler = (route: any) => {
     ws.send(JSON.stringify({ type: 'route', data: route }));
   }
@@ -94,12 +102,15 @@ wss.on('connection', (ws) => {
     ws.send(JSON.stringify({ type: 'status', data }));
   };
   
+  network.on('heatzones', heatzonesHandler);
   vehicleManager.on('update', vehicleUpdateHandler);
   vehicleManager.on('route', routeHandler);
   vehicleManager.on('options', optionsUpdateHandler);
   simulationController.on('updateStatus', statusUpdateHandler);
 
   ws.on('close', () => {
+
+    network.removeListener('heatzones', heatzonesHandler);
     vehicleManager.removeListener('route', routeHandler);
     vehicleManager.removeListener('update', vehicleUpdateHandler);
     vehicleManager.removeListener('options', optionsUpdateHandler);

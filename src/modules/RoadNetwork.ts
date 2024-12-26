@@ -3,6 +3,7 @@ import { FeatureCollection, LineString } from 'geojson';
 import { Node, Edge, Route, PathNode } from '../types';
 import * as utils from '../utils/helpers';
 import { HeatZoneManager } from './HeatZoneManager';
+import EventEmitter from 'events';
 
 export interface HeatZoneProperties {
   id: string;
@@ -24,7 +25,7 @@ export interface PathCost {
   distance: number;
 }
 
-export class RoadNetwork {
+export class RoadNetwork extends EventEmitter {
   private nodes: Map<string, Node> = new Map();
   private edges: Map<string, Edge> = new Map();
   private data: FeatureCollection;  
@@ -32,6 +33,7 @@ export class RoadNetwork {
   private heatZoneManager: HeatZoneManager = new HeatZoneManager(this.heatPenaltyFactor);
 
   constructor(geojsonPath: string) {
+    super();
     this.data = JSON.parse(fs.readFileSync(geojsonPath, 'utf8')) as FeatureCollection;
     this.buildNetwork(this.data);    
   }
@@ -259,6 +261,7 @@ export class RoadNetwork {
   } = {}): void {
     const bounds = this.getNetworkBounds();
     this.heatZoneManager.generateHeatedZones(bounds, options);
+    this.emit('heatzones', this.exportHeatZones());
   }
 
   /**
