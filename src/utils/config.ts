@@ -11,6 +11,7 @@ export const config = {
   acceleration: Number(process.env.ACCELERATION) || 5,
   deceleration: Number(process.env.DECELERATION) || 7,
   turnThreshold: Number(process.env.TURN_THRESHOLD) || 30,
+  heatZoneSpeedFactor: Number(process.env.HEATZONE_SPEED_FACTOR) || 0.5,
   defaultVehicles: Number(process.env.DEFAULT_VEHICLES) || 10,
   updateServer: process.env.UPDATE_SERVER === 'true',
   geojsonPath: process.env.GEOJSON_PATH || "./export.geojson"

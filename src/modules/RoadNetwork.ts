@@ -2,9 +2,7 @@ import fs from 'fs';
 import { FeatureCollection, LineString } from 'geojson';
 import { Node, Edge, Route, PathNode } from '../types';
 import * as utils from '../utils/helpers';
-import * as turf from '@turf/turf';
 import { HeatZoneManager } from './HeatZoneManager';
-import { HeatZone } from './HeatZoneManager';
 
 export interface HeatZoneProperties {
   id: string;
@@ -292,5 +290,9 @@ export class RoadNetwork {
       minLat + Math.random() * (maxLat - minLat),
       minLon + Math.random() * (maxLon - minLon)
     ];
+  }
+
+  public isPositionInHeatZone(position: [number, number]): boolean {
+    return this.heatZoneManager.isPositionInHeatZone(position);    
   }
 }

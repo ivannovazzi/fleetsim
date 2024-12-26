@@ -23,7 +23,7 @@ export class VehicleManager extends EventEmitter {
   private vehicles: Map<string, Vehicle> = new Map();
   private visitedEdges: Map<string, Set<string>> = new Map();
   private routes: Map<string, Route> = new Map();
-  
+
   /**
    * Tracks individual vehicle's setIntervals for movement.
    */
@@ -42,6 +42,7 @@ export class VehicleManager extends EventEmitter {
     deceleration: config.deceleration,
     turnThreshold: config.turnThreshold,
     defaultVehicles: config.defaultVehicles,
+    heatZoneSpeedFactor: config.heatZoneSpeedFactor,
     updateServer: config.updateServer,
   };
 
@@ -139,7 +140,7 @@ export class VehicleManager extends EventEmitter {
     }
     this.locationInterval = setInterval(async () => {
       if (!this.options.updateServer) return;
-      
+
       const vehicles = Array.from(this.vehicles.values());
       await sendLocation(
         vehicles.map((v) => ({
@@ -176,7 +177,7 @@ export class VehicleManager extends EventEmitter {
    */
   public getOptions(): StartOptions {
     return this.options;
-  }   
+  }
 
   /**
    * Moves a single vehicle once.
@@ -210,15 +211,44 @@ export class VehicleManager extends EventEmitter {
   private updateSpeed(vehicle: Vehicle): void {
     const nextEdge = this.getNextEdge(vehicle);
     if (!nextEdge) {
-      vehicle.speed = Math.max(this.options.minSpeed, vehicle.speed - this.options.deceleration);
+      vehicle.speed = Math.max(
+        this.options.minSpeed,
+        vehicle.speed - this.options.deceleration
+      );
       return;
     }
+
+    // Check if vehicle is in heat zone
+    const isInHeatZone = this.network.isPositionInHeatZone(vehicle.position);
+    const speedFactor = isInHeatZone ? this.options.heatZoneSpeedFactor : 1;
+
     const bearingDiff = Math.abs(nextEdge.bearing - vehicle.bearing);
     if (bearingDiff > this.options.turnThreshold) {
-      vehicle.speed = Math.max(this.options.minSpeed, vehicle.speed - this.options.deceleration);
+      vehicle.speed = this.safeSpeed(
+        vehicle.speed,
+        this.options.deceleration,
+        speedFactor
+      );
     } else {
-      vehicle.speed = Math.min(this.options.maxSpeed, vehicle.speed + this.options.acceleration);
+      vehicle.speed = this.safeSpeed(
+        vehicle.speed,
+        -this.options.acceleration,
+        speedFactor
+      );
     }
+  }
+
+  private safeSpeed(
+    speed: number,
+    increase: number,
+    speedFactor: number
+  ): number {
+    const minSpeed = this.options.minSpeed;
+    const maxSpeed = this.options.maxSpeed;
+    return Math.min(
+      maxSpeed,
+      Math.max(minSpeed, (speed - increase) * speedFactor)
+    );
   }
 
   /**
@@ -241,7 +271,8 @@ export class VehicleManager extends EventEmitter {
       (e) => !this.visitedEdges.get(vehicle.id)?.has(e.id)
     );
     if (unvisitedEdges.length > 0) {
-      const nextEdge = unvisitedEdges[Math.floor(Math.random() * unvisitedEdges.length)];
+      const nextEdge =
+        unvisitedEdges[Math.floor(Math.random() * unvisitedEdges.length)];
       this.visitedEdges.get(vehicle.id)?.add(nextEdge.id);
       return nextEdge;
     }
@@ -252,7 +283,8 @@ export class VehicleManager extends EventEmitter {
    * Random movement update.
    */
   private updatePosition(vehicle: Vehicle): void {
-    const distanceToMove = (vehicle.speed * this.options.updateInterval) / (3600 * 1000);
+    const distanceToMove =
+      (vehicle.speed * this.options.updateInterval) / (3600 * 1000);
     vehicle.progress += distanceToMove / vehicle.currentEdge.distance;
 
     if (vehicle.progress >= 1) {
@@ -272,7 +304,8 @@ export class VehicleManager extends EventEmitter {
    * Route-based movement update.
    */
   private updatePositionOnRoute(vehicle: Vehicle, route: Route): void {
-    const distanceToMove = (vehicle.speed * this.options.updateInterval) / (3600 * 1000);
+    const distanceToMove =
+      (vehicle.speed * this.options.updateInterval) / (3600 * 1000);
     vehicle.progress += distanceToMove / vehicle.currentEdge.distance;
 
     if (vehicle.progress >= 1) {
@@ -295,14 +328,20 @@ export class VehicleManager extends EventEmitter {
   /**
    * Schedules a vehicle to drive a route to the given destination.
    */
-  public async findAndSetRoutes(vehicleId: string, destination: [number, number]): Promise<void> {
+  public async findAndSetRoutes(
+    vehicleId: string,
+    destination: [number, number]
+  ): Promise<void> {
     const vehicle = this.vehicles.get(vehicleId);
     if (!vehicle) throw new Error(`Vehicle ${vehicleId} not found`);
 
     const endNode = this.network.findNearestNode(destination);
     const startNode = this.network.findNearestNode(vehicle.position);
 
-    if (startNode.connections.length === 0 || endNode.connections.length === 0) {
+    if (
+      startNode.connections.length === 0 ||
+      endNode.connections.length === 0
+    ) {
       console.error("Start/end node has no connections");
       return;
     }

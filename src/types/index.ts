@@ -81,6 +81,7 @@ export interface StartOptions {
   acceleration: number;
   deceleration: number;
   turnThreshold: number;
+  heatZoneSpeedFactor: number;
   defaultVehicles: number;
   updateServer: boolean;
 }

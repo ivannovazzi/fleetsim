@@ -66,9 +66,11 @@ app.get("/routes", (req, res) => {
 
 app.get("/heatzones", (req, res) => {
   network.generateHeatedZones({
-    count: 6,
-    minRadius: 1,
-    maxRadius: 5
+    count: 16,
+    minRadius: 0.3,
+    maxRadius: 2,
+    minIntensity: 0.3,
+    maxIntensity: 1
   });
   res.json(network.exportHeatZones());
 });
