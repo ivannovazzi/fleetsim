@@ -83,16 +83,16 @@ export interface Route {
 }
 
 export interface StartOptions {
-  updateInterval: number;
   minSpeed: number;
   maxSpeed: number;
+  speedVariation: number;
   acceleration: number;
   deceleration: number;
   turnThreshold: number;
   heatZoneSpeedFactor: number;
-  defaultVehicles: number;
+  updateInterval: number;
   updateServer: boolean;
-  speedVariation: number;  // percentage of speed variation (0-1)
+  updateServerTimeout: number;
 }
 
 

@@ -30,9 +30,9 @@ export class VehicleManager extends EventEmitter {
     acceleration: config.acceleration,
     deceleration: config.deceleration,
     turnThreshold: config.turnThreshold,
-    defaultVehicles: config.defaultVehicles,
     heatZoneSpeedFactor: config.heatZoneSpeedFactor,
     updateServer: config.updateServer,
+    updateServerTimeout: config.updateServerTimeout,
   };
 
   constructor(private network: RoadNetwork) {
@@ -212,13 +212,13 @@ export class VehicleManager extends EventEmitter {
   ): number {
     const minSpeed = this.options.minSpeed;
     const maxSpeed = this.options.maxSpeed;
+    const variation = this.options.speedVariation;
 
     const baseSpeed = Math.min(
       maxSpeed,
       Math.max(minSpeed, (speed - increase) * speedFactor)
     );
-
-    const variation = this.options.speedVariation;
+    
     const randomFactor = 1 + (Math.random() * variation * 2 - variation);
 
     return Math.min(maxSpeed, Math.max(minSpeed, baseSpeed * randomFactor));

@@ -13,8 +13,8 @@ export const config = {
   turnThreshold: Number(process.env.TURN_THRESHOLD) || 30,
   speedVariation: Number(process.env.SPEED_VARIATION) || 0.1,
   heatZoneSpeedFactor: Number(process.env.HEATZONE_SPEED_FACTOR) || 0.5,
-  defaultVehicles: Number(process.env.DEFAULT_VEHICLES) || 10,
   updateServer: process.env.UPDATE_SERVER === 'true',
+  updateServerTimeout: Number(process.env.UPDATE_SERVER_TIMEOUT) || 5000,
   geojsonPath: process.env.GEOJSON_PATH || "./export.geojson"
 } as const;
 

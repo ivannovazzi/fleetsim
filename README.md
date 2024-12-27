@@ -56,13 +56,13 @@ docker-compose up
 
 | Variable         | Description                             | Default |
 | ---------------- | --------------------------------------- | ------- |
-| UPDATE_INTERVAL  | Location update frequency (ms)          | 5000    |
 | MIN_SPEED        | Minimum vehicle speed (km/h)            | 20      |
 | MAX_SPEED        | Maximum vehicle speed (km/h)            | 60      |
 | ACCELERATION     | Speed increase rate (km/h/update)       | 5       |
 | DECELERATION     | Speed decrease rate (km/h/update)       | 7       |
 | TURN_THRESHOLD   | Angle to trigger turn behavior (degrees)| 30      |
-| DEFAULT_VEHICLES | Number of vehicles to simulate          | 10      |
+
+
 
 ## Development
 
