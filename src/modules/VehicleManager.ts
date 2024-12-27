@@ -1,4 +1,5 @@
 import {
+  Node,
   Vehicle,
   Edge,
   VehicleDTO,
@@ -14,24 +15,11 @@ import { EventEmitter } from "events";
 import * as utils from "../utils/helpers";
 import { serializeVehicle } from "../utils/serializer";
 
-/**
- * Manages vehicle creation, movement, and routing.
- * Each vehicle updates on its own interval.
- * Location updates are sent independently on a separate timer.
- */
 export class VehicleManager extends EventEmitter {
   private vehicles: Map<string, Vehicle> = new Map();
   private visitedEdges: Map<string, Set<string>> = new Map();
   private routes: Map<string, Route> = new Map();
-
-  /**
-   * Tracks individual vehicle's setIntervals for movement.
-   */
   private vehicleIntervals: Map<string, NodeJS.Timeout> = new Map();
-
-  /**
-   * Global location-upload interval.
-   */
   private locationInterval: NodeJS.Timeout | null = null;
 
   private options: StartOptions = {
@@ -52,11 +40,8 @@ export class VehicleManager extends EventEmitter {
     this.init();
   }
 
-  /**
-   * Init: fetches initial vehicles and populates the map.
-   */
   private async init(): Promise<void> {
-    const vehiclesData = await getVehicles();    
+    const vehiclesData = await getVehicles();
     const medical = vehiclesData.filter(utils.isMedical);
     const onShift = medical.filter(utils.isOnShift);
     const online = medical.filter(utils.isOnline);
@@ -82,41 +67,42 @@ export class VehicleManager extends EventEmitter {
       flags: {
         hasInternetConnectivity: Math.random() > 0.3,
         hasEngineIssue: Math.random() > 0.95,
-        lowFuel: Math.random() > 0.7
+        lowFuel: Math.random() > 0.7,
       },
       currentEdge: startEdge,
       position: startEdge.start.coordinates,
       speed: this.options.minSpeed,
       bearing: startEdge.bearing,
-      progress: 0
+      progress: 0,
     });
 
     this.visitedEdges.set(id, new Set([startEdge.id]));
+    // Set initial random destination
+    this.setRandomDestination(id);
   }
 
-  /**
-   * Resets a vehicle to a random edge.
-   */
-  private resetVehicle(id: string): void {
-    const vehicle = this.vehicles.get(id);
+  private async setRandomDestination(vehicleId: string): Promise<void> {
+    const vehicle = this.vehicles.get(vehicleId);
     if (!vehicle) return;
 
-    const startEdge = this.network.getRandomEdge();
-    vehicle.currentEdge = startEdge;
-    vehicle.position = startEdge.start.coordinates;
-    vehicle.speed = this.options.minSpeed;
-    vehicle.bearing = startEdge.bearing;
-    vehicle.progress = 0;
+    const destination = this.network.getRandomNode();
 
-    this.visitedEdges.get(id)?.clear();
-    this.visitedEdges.get(id)?.add(startEdge.id);
+    const route = this.network.findRoute(
+      this.network.findNearestNode(vehicle.position),
+      destination
+    );
+
+    if (route) {
+      this.routes.set(vehicleId, route);
+      this.emit("route", {
+        vehicleId,
+        route: utils.nonCircularRouteEdges(route),
+      });
+    }
   }
 
-  /**
-   * Starts a movement interval for the specified vehicle with a given update interval.
-   */
   public startVehicleMovement(vehicleId: string, intervalMs: number): void {
-    if (this.vehicleIntervals.has(vehicleId)) {      
+    if (this.vehicleIntervals.has(vehicleId)) {
       clearInterval(this.vehicleIntervals.get(vehicleId)!);
     }
     this.vehicleIntervals.set(
@@ -125,9 +111,6 @@ export class VehicleManager extends EventEmitter {
     );
   }
 
-  /**
-   * Stops a vehicle's movement interval.
-   */
   public stopVehicleMovement(vehicleId: string): void {
     if (this.vehicleIntervals.has(vehicleId)) {
       clearInterval(this.vehicleIntervals.get(vehicleId)!);
@@ -135,9 +118,6 @@ export class VehicleManager extends EventEmitter {
     }
   }
 
-  /**
-   * Starts sending location updates on a separate timer.
-   */
   public startLocationUpdates(intervalMs: number): void {
     if (this.locationInterval) {
       clearInterval(this.locationInterval);
@@ -158,9 +138,6 @@ export class VehicleManager extends EventEmitter {
     }, intervalMs);
   }
 
-  /**
-   * Stops sending location updates.
-   */
   public stopLocationUpdates(): void {
     if (this.locationInterval) {
       clearInterval(this.locationInterval);
@@ -168,24 +145,15 @@ export class VehicleManager extends EventEmitter {
     }
   }
 
-  /**
-   * Sets new global simulation options at runtime.
-   */
   public setOptions(options: Partial<StartOptions>): void {
     this.options = { ...this.options, ...options };
     this.emit("options", this.options);
   }
 
-  /**
-   * Gets the current simulation options.
-   */
   public getOptions(): StartOptions {
     return this.options;
   }
 
-  /**
-   * Moves a single vehicle once.
-   */
   private updateSingle(vehicleId: string): void {
     const vehicle = this.vehicles.get(vehicleId);
     if (!vehicle) return;
@@ -195,24 +163,19 @@ export class VehicleManager extends EventEmitter {
     this.emit("update", serializeVehicle(updatedVehicle!));
   }
 
-  /**
-   * Master update function for each vehicle (either random edges or route).
-   */
   private updateVehicle(vehicle: Vehicle): void {
     const route = this.routes.get(vehicle.id);
-        
+
     this.updateSpeed(vehicle);
-    
-    if (route && route.edges.length > 0) {
-      this.updatePositionOnRoute(vehicle, route);
+
+    if (!route || route.edges.length === 0) {
+      // If no route, get a new destination
+      this.setRandomDestination(vehicle.id);
     } else {
-      this.updatePosition(vehicle);
-    }    
+      this.updatePositionOnRoute(vehicle, route);
+    }
   }
 
-  /**
-   * Adjusts vehicle speed depending on route bearing or random path.
-   */
   private updateSpeed(vehicle: Vehicle): void {
     const nextEdge = this.getNextEdge(vehicle);
     if (!nextEdge) {
@@ -222,7 +185,7 @@ export class VehicleManager extends EventEmitter {
       );
       return;
     }
-    
+
     const isInHeatZone = this.network.isPositionInHeatZone(vehicle.position);
     const speedFactor = isInHeatZone ? this.options.heatZoneSpeedFactor : 1;
 
@@ -249,29 +212,29 @@ export class VehicleManager extends EventEmitter {
   ): number {
     const minSpeed = this.options.minSpeed;
     const maxSpeed = this.options.maxSpeed;
-        
-    const baseSpeed = Math.min(maxSpeed, Math.max(minSpeed, (speed - increase) * speedFactor));
-        
+
+    const baseSpeed = Math.min(
+      maxSpeed,
+      Math.max(minSpeed, (speed - increase) * speedFactor)
+    );
+
     const variation = this.options.speedVariation;
     const randomFactor = 1 + (Math.random() * variation * 2 - variation);
-        
+
     return Math.min(maxSpeed, Math.max(minSpeed, baseSpeed * randomFactor));
   }
 
-  /**
-   * Random or route-based edge selection.
-   */
   private getNextEdge(vehicle: Vehicle): Edge {
     const currentEdge = vehicle.currentEdge;
     const possibleEdges = this.network.getConnectedEdges(currentEdge);
-    if (possibleEdges.length === 0) {      
+    if (possibleEdges.length === 0) {
       return {
         ...currentEdge,
         start: currentEdge.end,
         end: currentEdge.start,
         bearing: (currentEdge.bearing + 180) % 360,
       };
-    }    
+    }
     const unvisitedEdges = possibleEdges.filter(
       (e) => !this.visitedEdges.get(vehicle.id)?.has(e.id)
     );
@@ -319,7 +282,12 @@ export class VehicleManager extends EventEmitter {
         vehicle.currentEdge = route.edges[idx + 1];
         vehicle.progress = 0;
       } else {
-        this.routes.delete(vehicle.id);
+        // Route completed - set new destination
+        this.emit("destinationReached", {
+          vehicleId: vehicle.id,
+          position: vehicle.position,
+        });
+        this.setRandomDestination(vehicle.id);
       }
     }
     vehicle.position = utils.interpolatePosition(
@@ -330,9 +298,6 @@ export class VehicleManager extends EventEmitter {
     vehicle.bearing = vehicle.currentEdge.bearing;
   }
 
-  /**
-   * Schedules a vehicle to drive a route to the given destination.
-   */
   public async findAndSetRoutes(
     vehicleId: string,
     destination: [number, number]
@@ -366,9 +331,6 @@ export class VehicleManager extends EventEmitter {
     vehicle.progress = 0;
   }
 
-  /**
-   * Retrieves all vehicles as DTOs.
-   */
   public getVehicles(): VehicleDTO[] {
     return Array.from(this.vehicles.values()).map(serializeVehicle);
   }
