@@ -79,11 +79,16 @@ export class VehicleManager extends EventEmitter {
       id,
       name,
       status,
+      flags: {
+        hasInternetConnectivity: Math.random() > 0.3,
+        hasEngineIssue: Math.random() > 0.95,
+        lowFuel: Math.random() > 0.7
+      },
       currentEdge: startEdge,
       position: startEdge.start.coordinates,
       speed: this.options.minSpeed,
       bearing: startEdge.bearing,
-      progress: 0,
+      progress: 0
     });
 
     this.visitedEdges.set(id, new Set([startEdge.id]));

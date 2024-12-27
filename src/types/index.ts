@@ -29,10 +29,17 @@ export interface Edge {
   bearing: number;
 }
 
+export interface VehicleFlags {
+  hasInternetConnectivity: boolean;
+  hasEngineIssue: boolean;
+  lowFuel: boolean;
+}
+
 export interface Vehicle {
   id: string;
   name: string;
   status: VehicleStatus;
+  flags: VehicleFlags;
   currentEdge: Edge;
   position: [number, number];
   speed: number;
@@ -51,6 +58,7 @@ export interface VehicleDTO {
   id: string;
   name: string;
   status: VehicleStatus;
+  flags: VehicleFlags;
   position: [number, number];
   speed: number;
   heading: number;
