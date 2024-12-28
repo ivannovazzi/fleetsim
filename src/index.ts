@@ -32,11 +32,6 @@ app.post('/stop', (req, res) => {
   res.json({ status: 'stopped' });
 });
 
-app.post('/reset', (req, res) => {
-  simulationController.reset();
-  res.json({ status: 'reset' });
-});
-
 app.post('/direction', async (req, res) => {
   await simulationController.setDirections(req.body);
   res.json({ status: 'direction' });

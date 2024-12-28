@@ -20,10 +20,8 @@ export class SimulationController extends EventEmitter {
   }
 
   async start(options: Partial<StartOptions>): Promise<void> {
-    // Apply new settings
     this.vehicleManager.setOptions(options);
 
-    // Retrieve the current update interval
     const intervalMs = this.vehicleManager.getOptions().updateInterval;
 
     for (const v of this.vehicleManager.getVehicles()) {
@@ -44,22 +42,14 @@ export class SimulationController extends EventEmitter {
       const { id, lat, lng } = request;
       await this.vehicleManager.findAndSetRoutes(id, [lat, lng]);
     }
-    this.emit('updateStatus', this.getStatus());
   }  
 
 
   public stop(): void {
-    // Stops movement for all vehicles
     for (const v of this.vehicleManager.getVehicles()) {
       this.vehicleManager.stopVehicleMovement(v.id);
     }
-    // Stop global location updates
     this.vehicleManager.stopLocationUpdates();
-    this.emit('updateStatus', this.getStatus());
-  }
-
-  async reset(): Promise<void> {
-    await this.vehicleManager.reset();
     this.emit('updateStatus', this.getStatus());
   }
 

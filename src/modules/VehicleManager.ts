@@ -21,6 +21,7 @@ export class VehicleManager extends EventEmitter {
   private routes: Map<string, Route> = new Map();
   private vehicleIntervals: Map<string, NodeJS.Timeout> = new Map();
   private locationInterval: NodeJS.Timeout | null = null;
+  private lastUpdateTimes: Map<string, number> = new Map();
 
   private options: StartOptions = {
     updateInterval: config.updateInterval,
@@ -105,6 +106,9 @@ export class VehicleManager extends EventEmitter {
     if (this.vehicleIntervals.has(vehicleId)) {
       clearInterval(this.vehicleIntervals.get(vehicleId)!);
     }
+    // Record the time right before we start
+    this.lastUpdateTimes.set(vehicleId, Date.now());
+
     this.vehicleIntervals.set(
       vehicleId,
       setInterval(() => this.updateSingle(vehicleId), intervalMs)
@@ -158,70 +162,72 @@ export class VehicleManager extends EventEmitter {
     const vehicle = this.vehicles.get(vehicleId);
     if (!vehicle) return;
 
-    this.updateVehicle(vehicle);
-    const updatedVehicle = this.vehicles.get(vehicleId);
-    this.emit("update", serializeVehicle(updatedVehicle!));
+    // Compute real time elapsed since last update
+    const now = Date.now();
+    const lastUpdate = this.lastUpdateTimes.get(vehicleId) ?? now;
+    const deltaMs = now - lastUpdate;
+    this.lastUpdateTimes.set(vehicleId, now);
+
+    // Use deltaMs instead of intervalMs for speed/movement
+    this.updateVehicle(vehicle, deltaMs);
+
+    this.emit("update", serializeVehicle(vehicle));
   }
 
-  private updateVehicle(vehicle: Vehicle): void {
+  private updateVehicle(vehicle: Vehicle, deltaMs: number): void {
     const route = this.routes.get(vehicle.id);
-
-    this.updateSpeed(vehicle);
+    this.updateSpeed(vehicle, deltaMs);
 
     if (!route || route.edges.length === 0) {
-      // If no route, get a new destination
+      this.updatePosition(vehicle, deltaMs);
       this.setRandomDestination(vehicle.id);
     } else {
-      this.updatePositionOnRoute(vehicle, route);
+      this.updatePositionOnRoute(vehicle, route, deltaMs);
     }
   }
 
-  private updateSpeed(vehicle: Vehicle): void {
+  private updateSpeed(vehicle: Vehicle, deltaMs: number): void {
     const nextEdge = this.getNextEdge(vehicle);
+    const isInHeatZone = this.network.isPositionInHeatZone(vehicle.position);
+    const speedFactor = isInHeatZone ? this.options.heatZoneSpeedFactor : 1;
+
     if (!nextEdge) {
       vehicle.speed = Math.max(
         this.options.minSpeed,
-        vehicle.speed - this.options.deceleration
+        this.computeNewSpeed(vehicle.speed, this.options.deceleration, deltaMs)
       );
       return;
     }
 
-    const isInHeatZone = this.network.isPositionInHeatZone(vehicle.position);
-    const speedFactor = isInHeatZone ? this.options.heatZoneSpeedFactor : 1;
-
     const bearingDiff = Math.abs(nextEdge.bearing - vehicle.bearing);
     if (bearingDiff > this.options.turnThreshold) {
       vehicle.speed = this.safeSpeed(
-        vehicle.speed,
-        this.options.deceleration,
+        this.computeNewSpeed(vehicle.speed, this.options.deceleration, deltaMs),
         speedFactor
       );
     } else {
       vehicle.speed = this.safeSpeed(
-        vehicle.speed,
-        -this.options.acceleration,
+        this.computeNewSpeed(vehicle.speed, -this.options.acceleration, deltaMs),
         speedFactor
       );
-    }
+    }    
   }
 
-  private safeSpeed(
-    speed: number,
-    increase: number,
-    speedFactor: number
-  ): number {
-    const minSpeed = this.options.minSpeed;
-    const maxSpeed = this.options.maxSpeed;
-    const variation = this.options.speedVariation;
+  private computeNewSpeed(currentSpeed: number, accel: number, deltaMs: number): number {
+    // Convert deltaMs to hours
+    const deltaHours = deltaMs / 3600000;
+    return currentSpeed + accel * deltaHours;
+  }
 
-    const baseSpeed = Math.min(
-      maxSpeed,
-      Math.max(minSpeed, (speed - increase) * speedFactor)
-    );
-    
-    const randomFactor = 1 + (Math.random() * variation * 2 - variation);
+  private safeSpeed(newSpeed: number, speedFactor: number): number {
+    let s = newSpeed * speedFactor;
+    s = Math.min(this.options.maxSpeed, Math.max(this.options.minSpeed, s));
 
-    return Math.min(maxSpeed, Math.max(minSpeed, baseSpeed * randomFactor));
+    // Apply random variation
+    const variationFactor = 1 + (Math.random() * this.options.speedVariation * 2 - this.options.speedVariation);
+    s *= variationFactor;
+
+    return Math.min(this.options.maxSpeed, Math.max(this.options.minSpeed, s));
   }
 
   private getNextEdge(vehicle: Vehicle): Edge {
@@ -250,52 +256,93 @@ export class VehicleManager extends EventEmitter {
   /**
    * Random movement update.
    */
-  private updatePosition(vehicle: Vehicle): void {
-    const distanceToMove =
-      (vehicle.speed * this.options.updateInterval) / (3600 * 1000);
-    vehicle.progress += distanceToMove / vehicle.currentEdge.distance;
+  private updatePosition(vehicle: Vehicle, deltaMs: number): void {
+    let remainingDistance = (vehicle.speed / 3600) * (deltaMs / 1000);
 
-    if (vehicle.progress >= 1) {
-      const nextEdge = this.getNextEdge(vehicle);
-      vehicle.currentEdge = nextEdge;
-      vehicle.progress = 0;
+    while (remainingDistance > 0) {
+      const edgeRemaining = (1 - vehicle.progress) * vehicle.currentEdge.distance;
+      if (remainingDistance >= edgeRemaining) {
+        vehicle.progress = 1;
+        remainingDistance -= edgeRemaining;
+
+        vehicle.position = utils.interpolatePosition(
+          vehicle.currentEdge.start.coordinates,
+          vehicle.currentEdge.end.coordinates,
+          vehicle.progress
+        );
+        vehicle.bearing = vehicle.currentEdge.bearing;
+
+        const nextEdge = this.getNextEdge(vehicle);
+        vehicle.currentEdge = nextEdge;
+        vehicle.progress = 0;
+      } else {
+        vehicle.progress += remainingDistance / vehicle.currentEdge.distance;
+        remainingDistance = 0;
+
+        vehicle.position = utils.interpolatePosition(
+          vehicle.currentEdge.start.coordinates,
+          vehicle.currentEdge.end.coordinates,
+          vehicle.progress
+        );
+        vehicle.bearing = vehicle.currentEdge.bearing;
+      }
     }
-    vehicle.position = utils.interpolatePosition(
-      vehicle.currentEdge.start.coordinates,
-      vehicle.currentEdge.end.coordinates,
-      vehicle.progress
-    );
-    vehicle.bearing = vehicle.currentEdge.bearing;
   }
 
   /**
    * Route-based movement update.
    */
-  private updatePositionOnRoute(vehicle: Vehicle, route: Route): void {
-    const distanceToMove =
-      (vehicle.speed * this.options.updateInterval) / (3600 * 1000);
-    vehicle.progress += distanceToMove / vehicle.currentEdge.distance;
+  private updatePositionOnRoute(vehicle: Vehicle, route: Route, deltaMs: number): void {
+    // Convert speed & elapsed time to distance in km
+    let remainingDistance = (vehicle.speed / 3600) * (deltaMs / 1000);
 
-    if (vehicle.progress >= 1) {
-      const idx = route.edges.findIndex((e) => e.id === vehicle.currentEdge.id);
-      if (idx < route.edges.length - 1) {
-        vehicle.currentEdge = route.edges[idx + 1];
-        vehicle.progress = 0;
+    // Continue while we still have distance to travel
+    while (remainingDistance > 0) {
+      // How far we have left on the current edge (in km)
+      const edgeRemaining = (1 - vehicle.progress) * vehicle.currentEdge.distance;
+      
+      // If we can finish this edge within 'remainingDistance'
+      if (remainingDistance >= edgeRemaining) {
+        // Move exactly to the end of this edge
+        vehicle.progress = 1;
+        remainingDistance -= edgeRemaining;
+
+        // Apply final position on current edge
+        vehicle.position = utils.interpolatePosition(
+          vehicle.currentEdge.start.coordinates,
+          vehicle.currentEdge.end.coordinates,
+          vehicle.progress
+        );
+        vehicle.bearing = vehicle.currentEdge.bearing;
+
+        // Move to next edge or finish route
+        const edgeIndex = route.edges.findIndex(e => e.id === vehicle.currentEdge.id);
+        if (edgeIndex < route.edges.length - 1) {
+          vehicle.currentEdge = route.edges[edgeIndex + 1];
+          vehicle.progress = 0;
+        } else {
+          // We've reached destination
+          this.emit("destinationReached", {
+            vehicleId: vehicle.id,
+            position: vehicle.position
+          });
+          this.setRandomDestination(vehicle.id);
+          return;
+        }
       } else {
-        // Route completed - set new destination
-        this.emit("destinationReached", {
-          vehicleId: vehicle.id,
-          position: vehicle.position,
-        });
-        this.setRandomDestination(vehicle.id);
+        // We can't finish this edge; just advance partway
+        vehicle.progress += remainingDistance / vehicle.currentEdge.distance;
+        remainingDistance = 0;
+
+        // Interpolate position
+        vehicle.position = utils.interpolatePosition(
+          vehicle.currentEdge.start.coordinates,
+          vehicle.currentEdge.end.coordinates,
+          vehicle.progress
+        );
+        vehicle.bearing = vehicle.currentEdge.bearing;
       }
     }
-    vehicle.position = utils.interpolatePosition(
-      vehicle.currentEdge.start.coordinates,
-      vehicle.currentEdge.end.coordinates,
-      vehicle.progress
-    );
-    vehicle.bearing = vehicle.currentEdge.bearing;
   }
 
   public async findAndSetRoutes(
