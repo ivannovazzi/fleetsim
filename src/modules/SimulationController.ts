@@ -55,7 +55,7 @@ export class SimulationController extends EventEmitter {
 
   async setOptions(options: StartOptions): Promise<void> {
     await this.vehicleManager.setOptions(options);
-    this.emit('setStatus', this.getStatus());
+    this.emit('updateStatus', this.getStatus());
   }
 
   async getOptions(): Promise<StartOptions> {

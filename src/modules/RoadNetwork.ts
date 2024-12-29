@@ -28,9 +28,8 @@ export interface PathCost {
 export class RoadNetwork extends EventEmitter {
   private nodes: Map<string, Node> = new Map();
   private edges: Map<string, Edge> = new Map();
-  private data: FeatureCollection;  
-  private heatPenaltyFactor = 1.5;
-  private heatZoneManager: HeatZoneManager = new HeatZoneManager(this.heatPenaltyFactor);
+  private data: FeatureCollection;
+  private heatZoneManager: HeatZoneManager = new HeatZoneManager();
 
   constructor(geojsonPath: string) {
     super();

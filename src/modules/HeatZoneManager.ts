@@ -24,7 +24,7 @@ export interface HeatZoneFeature {
 export class HeatZoneManager {
   private zones: HeatZone[] = [];
 
-  constructor(private heatPenaltyFactor: number = 1.5) {}
+  constructor() {}
 
   public getZones(): HeatZone[] {
     return this.zones;
