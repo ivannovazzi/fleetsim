@@ -59,6 +59,11 @@ app.get("/routes", (req, res) => {
   res.json(vehicleManager.getRoutes());
 });
 
+app.post("/search", async (req, res) => {
+  const results = await network.searchByName(req.body.query);
+  res.json(results);
+});
+
 app.post("/heatzones", (req, res) => {
   network.generateHeatedZones({
     count: 16,

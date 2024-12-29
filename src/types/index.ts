@@ -23,6 +23,7 @@ export interface Node {
 export interface Edge {
   id: string;
   streetId: string;
+  name?: string;
   start: Node;
   end: Node;
   distance: number;

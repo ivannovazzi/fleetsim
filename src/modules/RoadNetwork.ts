@@ -1,4 +1,5 @@
 import fs from 'fs';
+import crypto from 'crypto';
 import { FeatureCollection, LineString } from 'geojson';
 import { Node, Edge, Route, PathNode } from '../types';
 import * as utils from '../utils/helpers';
@@ -27,7 +28,7 @@ export interface PathCost {
 
 export class RoadNetwork extends EventEmitter {
   private nodes: Map<string, Node> = new Map();
-  private edges: Map<string, Edge> = new Map();
+  private edges: Map<string, Edge & { name?: string }> = new Map();
   private data: FeatureCollection;
   private heatZoneManager: HeatZoneManager = new HeatZoneManager();
 
@@ -49,44 +50,49 @@ export class RoadNetwork extends EventEmitter {
     return this.data;
   }
 
+  /**
+   * Builds the network of nodes & edges; also reads the 'name' from feature properties.
+   */
   private buildNetwork(data: FeatureCollection): void {
     data.features.forEach(feature => {
       if (feature.geometry.type === 'LineString') {
         const streetId = feature.properties?.id || crypto.randomUUID();
-        const coordinates = (feature.geometry as LineString).coordinates;
+        const streetName = feature.properties?.name || 'Unnamed Road';
+        const coords = (feature.geometry as LineString).coordinates;        
 
-        for (let i = 0; i < coordinates.length - 1; i++) {
-          const [lon1, lat1] = coordinates[i];
-          const [lon2, lat2] = coordinates[i + 1];
+        for (let i = 0; i < coords.length - 1; i++) {
+          const [lon1, lat1] = coords[i];
+          const [lon2, lat2] = coords[i + 1];
 
           const node1 = this.getOrCreateNode(`${lat1},${lon1}`, [lat1, lon1]);
           const node2 = this.getOrCreateNode(`${lat2},${lon2}`, [lat2, lon2]);
 
-          // Create forward edge
-          const forwardEdge: Edge = {
+          const distance = utils.calculateDistance(node1.coordinates, node2.coordinates);
+          const bearing = utils.calculateBearing(node1.coordinates, node2.coordinates);
+          
+          const forwardEdge: Edge & { name?: string } = {
             id: `${node1.id}-${node2.id}`,
             streetId,
             start: node1,
             end: node2,
-            distance: utils.calculateDistance(node1.coordinates, node2.coordinates),
-            bearing: utils.calculateBearing(node1.coordinates, node2.coordinates)
+            distance,
+            bearing,
+            name: streetName
           };
-
-          // Create reverse edge
-          const reverseEdge: Edge = {
+          
+          const reverseEdge: Edge & { name?: string } = {
             id: `${node2.id}-${node1.id}`,
             streetId,
             start: node2,
             end: node1,
-            distance: forwardEdge.distance,
-            bearing: (forwardEdge.bearing + 180) % 360
+            distance,
+            bearing: (bearing + 180) % 360,
+            name: streetName
           };
-
-          // Add edges to collections
+          
           this.edges.set(forwardEdge.id, forwardEdge);
           this.edges.set(reverseEdge.id, reverseEdge);
-
-          // Add connections to nodes
+          
           node1.connections.push(forwardEdge);
           node2.connections.push(reverseEdge);
         }
@@ -131,22 +137,21 @@ export class RoadNetwork extends EventEmitter {
         nearest = node;
       }
     }
-
     if (!nearest) {
       throw new Error('Could not find nearest node');
     }
-
     return nearest;
   }
 
+  /**
+   * Returns edges connected at the end node of the provided edge, excluding any that lead back to the start node.
+   */
   public getConnectedEdges(edge: Edge): Edge[] {
     return edge.end.connections.filter(e => e.end.id !== edge.start.id);
   }
   
   private calculateEdgeCost(edge: Edge): PathCost {
-    return {
-      distance: edge.distance
-    };
+    return { distance: edge.distance };
   }
 
   public findRoute(start: Node, end: Node): Route | null {
@@ -156,8 +161,7 @@ export class RoadNetwork extends EventEmitter {
     
     const gScore = new Map<string, number>();
     const fScore = new Map<string, number>();
-
-    // Initialize start node
+    
     gScore.set(start.id, 0);
     const initialH = this.calculateHeuristic(start, end);
     fScore.set(start.id, initialH);
@@ -204,7 +208,6 @@ export class RoadNetwork extends EventEmitter {
         }
       }
     }
-
     return null;
   }
 
@@ -243,7 +246,68 @@ export class RoadNetwork extends EventEmitter {
     }
     return lowest!;
   }
-  
+
+  /**
+   * Allows searching edges by their 'name'. Returns an array of matching edges with IDs, names, and node details.
+   */
+  public searchByName(query: string): Array<{
+    name: string;
+    nodeIds: string[];
+    coordinates: [number, number][];
+  }> {
+    const results: Array<{
+      name: string;
+      nodeIds: string[];
+      coordinates: [number, number][];
+    }> = [];
+
+    const lowerQuery = query.toLowerCase();
+    const groupedByName = new Map<
+      string,
+      {
+        name: string;
+        nodeIds: Set<string>;
+        coordinates: Array<[number, number]>;
+      }
+    >();
+
+    for (const feature of this.data.features) {
+      if (feature.geometry.type === 'LineString') {
+        const roadName = feature.properties?.name || 'Unnamed Road';
+        if (roadName.toLowerCase().includes(lowerQuery)) {
+          if (!groupedByName.has(roadName)) {
+            groupedByName.set(roadName, {
+              name: roadName,
+              nodeIds: new Set<string>(),
+              coordinates: [],
+            });
+          }
+
+          const group = groupedByName.get(roadName)!;
+          const coords = (feature.geometry as LineString).coordinates;
+
+          for (const [lon, lat] of coords) {
+            group.coordinates.push([lat, lon]);
+            const nodeId = `${lat},${lon}`;
+            if (this.nodes.has(nodeId)) {
+              group.nodeIds.add(nodeId);
+            }
+          }
+        }
+      }
+    }
+
+    for (const [, group] of groupedByName.entries()) {
+      results.push({
+        name: group.name,
+        nodeIds: Array.from(group.nodeIds),
+        coordinates: group.coordinates,
+      });
+    }
+
+    return results;
+  }
+
   public generateHeatedZones(options: {
     count?: number;
     minRadius?: number;
