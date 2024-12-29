@@ -33,6 +33,7 @@ export interface VehicleFlags {
   hasInternetConnectivity: boolean;
   hasEngineIssue: boolean;
   lowFuel: boolean;
+  isInHeatZone: boolean;
 }
 
 export interface Vehicle {

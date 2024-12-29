@@ -143,12 +143,7 @@ export class RoadNetwork extends EventEmitter {
   public getConnectedEdges(edge: Edge): Edge[] {
     return edge.end.connections.filter(e => e.end.id !== edge.start.id);
   }
-
-  private bboxesIntersect(a: [number, number, number, number], b: [number, number, number, number]): boolean {
-    // [minX, minY, maxX, maxY]
-    return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
-  }
-
+  
   private calculateEdgeCost(edge: Edge): PathCost {
     return {
       distance: edge.distance
@@ -190,10 +185,8 @@ export class RoadNetwork extends EventEmitter {
         if (closedSet.has(edge.end.id)) continue;
 
         const edgeCost = this.calculateEdgeCost(edge);
-        const currentCost = gScore.get(current.id)!;
-        
+        const currentCost = gScore.get(current.id)!;        
         const tentativeCost = currentCost + edgeCost.distance;
-
         const existingCost = gScore.get(edge.end.id);
         
         if (!existingCost || tentativeCost < existingCost) {
@@ -285,14 +278,6 @@ export class RoadNetwork extends EventEmitter {
     });
 
     return [[minLat, minLon], [maxLat, maxLon]];
-  }
-
-  private getRandomPointInBounds(bounds: [[number, number], [number, number]]): [number, number] {
-    const [[minLat, minLon], [maxLat, maxLon]] = bounds;
-    return [
-      minLat + Math.random() * (maxLat - minLat),
-      minLon + Math.random() * (maxLon - minLon)
-    ];
   }
 
   public isPositionInHeatZone(position: [number, number]): boolean {
