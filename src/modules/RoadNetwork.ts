@@ -6,29 +6,16 @@ import * as utils from '../utils/helpers';
 import { HeatZoneManager } from './HeatZoneManager';
 import EventEmitter from 'events';
 
-export interface HeatZoneProperties {
-  id: string;
-  intensity: number;
-  timestamp: string;
-  radius: number;
-}
-
-export interface HeatZoneFeature {
-  type: "Feature";
-  properties: HeatZoneProperties;
-  geometry: {
-    type: "Polygon";
-    coordinates: number[][][];
-  };
-}
-
-export interface PathCost {
-  distance: number;
+interface Road {
+  name: string;
+  nodeIds: Set<string>;
+  coordinates: [number, number][];
 }
 
 export class RoadNetwork extends EventEmitter {
   private nodes: Map<string, Node> = new Map();
   private edges: Map<string, Edge & { name?: string }> = new Map();
+  private roads: Map<string, Road> = new Map();
   private data: FeatureCollection;
   private heatZoneManager: HeatZoneManager = new HeatZoneManager();
 
@@ -38,11 +25,11 @@ export class RoadNetwork extends EventEmitter {
     this.buildNetwork(this.data);    
   }
 
-  public getAllRoads(): Edge[] {
-    return Array.from(this.edges.values());
+  public getAllRoads(): Road[] {
+    return Array.from(this.roads.values());
   }
 
-  public getAllNodes(): Node[] {
+  private getAllNodes(): Node[] {
     return Array.from(this.nodes.values());
   }
 
@@ -58,8 +45,24 @@ export class RoadNetwork extends EventEmitter {
       if (feature.geometry.type === 'LineString') {
         const streetId = feature.properties?.id || crypto.randomUUID();
         const streetName = feature.properties?.name || 'Unnamed Road';
-        const coords = (feature.geometry as LineString).coordinates;        
+        const coords = (feature.geometry as LineString).coordinates;
 
+        // Initialize or get existing road
+        if (!this.roads.has(streetName)) {
+          this.roads.set(streetName, {
+            name: streetName,
+            nodeIds: new Set<string>(),
+            coordinates: [],
+          });
+        }
+        const road = this.roads.get(streetName)!;
+
+        // Add coordinates to road
+        for (const [lon, lat] of coords) {
+          road.coordinates.push([lat, lon]);
+        }
+
+        // Build edges
         for (let i = 0; i < coords.length - 1; i++) {
           const [lon1, lat1] = coords[i];
           const [lon2, lat2] = coords[i + 1];
@@ -67,10 +70,13 @@ export class RoadNetwork extends EventEmitter {
           const node1 = this.getOrCreateNode(`${lat1},${lon1}`, [lat1, lon1]);
           const node2 = this.getOrCreateNode(`${lat2},${lon2}`, [lat2, lon2]);
 
+          road.nodeIds.add(node1.id);
+          road.nodeIds.add(node2.id);
+
           const distance = utils.calculateDistance(node1.coordinates, node2.coordinates);
           const bearing = utils.calculateBearing(node1.coordinates, node2.coordinates);
           
-          const forwardEdge: Edge & { name?: string } = {
+          const forwardEdge: Edge = {
             id: `${node1.id}-${node2.id}`,
             streetId,
             start: node1,
@@ -80,7 +86,7 @@ export class RoadNetwork extends EventEmitter {
             name: streetName
           };
           
-          const reverseEdge: Edge & { name?: string } = {
+          const reverseEdge: Edge = {
             id: `${node2.id}-${node1.id}`,
             streetId,
             start: node2,
@@ -94,7 +100,7 @@ export class RoadNetwork extends EventEmitter {
           this.edges.set(reverseEdge.id, reverseEdge);
           
           node1.connections.push(forwardEdge);
-          node2.connections.push(reverseEdge);
+          node2.connections.push(reverseEdge);          
         }
       }
     });
@@ -150,10 +156,6 @@ export class RoadNetwork extends EventEmitter {
     return edge.end.connections.filter(e => e.end.id !== edge.start.id);
   }
   
-  private calculateEdgeCost(edge: Edge): PathCost {
-    return { distance: edge.distance };
-  }
-
   public findRoute(start: Node, end: Node): Route | null {
     const openSet = new Map<string, PathNode>();
     const closedSet = new Set<string>();
@@ -187,9 +189,8 @@ export class RoadNetwork extends EventEmitter {
       for (const edge of currentNode.connections) {
         if (closedSet.has(edge.end.id)) continue;
 
-        const edgeCost = this.calculateEdgeCost(edge);
         const currentCost = gScore.get(current.id)!;        
-        const tentativeCost = currentCost + edgeCost.distance;
+        const tentativeCost = currentCost + edge.distance;
         const existingCost = gScore.get(edge.end.id);
         
         if (!existingCost || tentativeCost < existingCost) {
@@ -255,54 +256,21 @@ export class RoadNetwork extends EventEmitter {
     nodeIds: string[];
     coordinates: [number, number][];
   }> {
+    const lowerQuery = query.toLowerCase();
     const results: Array<{
       name: string;
       nodeIds: string[];
       coordinates: [number, number][];
     }> = [];
 
-    const lowerQuery = query.toLowerCase();
-    const groupedByName = new Map<
-      string,
-      {
-        name: string;
-        nodeIds: Set<string>;
-        coordinates: Array<[number, number]>;
+    for (const [name, road] of this.roads) {
+      if (name.toLowerCase().includes(lowerQuery)) {
+        results.push({
+          name: road.name,
+          nodeIds: Array.from(road.nodeIds),
+          coordinates: road.coordinates
+        });
       }
-    >();
-
-    for (const feature of this.data.features) {
-      if (feature.geometry.type === 'LineString') {
-        const roadName = feature.properties?.name || 'Unnamed Road';
-        if (roadName.toLowerCase().includes(lowerQuery)) {
-          if (!groupedByName.has(roadName)) {
-            groupedByName.set(roadName, {
-              name: roadName,
-              nodeIds: new Set<string>(),
-              coordinates: [],
-            });
-          }
-
-          const group = groupedByName.get(roadName)!;
-          const coords = (feature.geometry as LineString).coordinates;
-
-          for (const [lon, lat] of coords) {
-            group.coordinates.push([lat, lon]);
-            const nodeId = `${lat},${lon}`;
-            if (this.nodes.has(nodeId)) {
-              group.nodeIds.add(nodeId);
-            }
-          }
-        }
-      }
-    }
-
-    for (const [, group] of groupedByName.entries()) {
-      results.push({
-        name: group.name,
-        nodeIds: Array.from(group.nodeIds),
-        coordinates: group.coordinates,
-      });
     }
 
     return results;
@@ -320,9 +288,6 @@ export class RoadNetwork extends EventEmitter {
     this.emit('heatzones', this.exportHeatZones());
   }
 
-  /**
-   * Exports heat zones as GeoJSON FeatureCollection
-   */
   public exportHeatZones(): string[] {
     return this.heatZoneManager.exportHeatedZonesAsPaths();
   }

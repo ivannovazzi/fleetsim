@@ -108,3 +108,30 @@ export interface VehicleRoute {
   vehicleId: string;
   route: Route;
 }
+
+export interface HeatZoneProperties {
+  id: string;
+  intensity: number;
+  timestamp: string;
+  radius: number;
+}
+
+export interface HeatZone {
+  polygon: number[][];
+  intensity: number;  // 0-1 scale
+  timestamp: string;
+}
+
+export interface HeatZoneFeature {
+  type: "Feature";
+  properties: {
+    id: string;
+    intensity: number;
+    timestamp: string;
+    radius: number;
+  };
+  geometry: {
+    type: "Polygon";
+    coordinates: number[][][];
+  };
+}

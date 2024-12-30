@@ -188,9 +188,9 @@ export class VehicleManager extends EventEmitter {
     const speedFactor = isInHeatZone ? this.options.heatZoneSpeedFactor : 1;
 
     if (!nextEdge) {
-      vehicle.speed = Math.max(
-        this.options.minSpeed,
-        this.computeNewSpeed(vehicle.speed, this.options.deceleration, deltaMs)
+      vehicle.speed = this.safeSpeed(
+        this.computeNewSpeed(vehicle.speed, this.options.deceleration, deltaMs),
+        speedFactor
       );
       return;
     }

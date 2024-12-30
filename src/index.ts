@@ -51,8 +51,12 @@ app.post('/options', async (req, res) => {
   res.json({ status: 'options set' });
 });
 
-app.get("/roads", (req, res) => {
+app.get("/network", (req, res) => {
   res.json(network.getFeatures());
+});
+
+app.get("/roads", (req, res) => {
+  res.json(network.getAllRoads());
 });
 
 app.get("/routes", (req, res) => {

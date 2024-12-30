@@ -1,25 +1,6 @@
 import * as turf from '@turf/turf';
 import crypto from 'crypto';
-
-export interface HeatZone {
-  polygon: number[][];
-  intensity: number;  // 0-1 scale
-  timestamp: string;
-}
-
-export interface HeatZoneFeature {
-  type: "Feature";
-  properties: {
-    id: string;
-    intensity: number;
-    timestamp: string;
-    radius: number;
-  };
-  geometry: {
-    type: "Polygon";
-    coordinates: number[][][];
-  };
-}
+import { HeatZone, HeatZoneFeature } from '../types';
 
 export class HeatZoneManager {
   private zones: HeatZone[] = [];
