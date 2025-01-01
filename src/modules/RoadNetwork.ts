@@ -1,15 +1,17 @@
 import fs from 'fs';
 import crypto from 'crypto';
-import { FeatureCollection, LineString } from 'geojson';
+import { Feature, FeatureCollection, LineString } from 'geojson';
 import { Node, Edge, Route, PathNode, HeatZoneFeature } from '../types';
 import * as utils from '../utils/helpers';
 import { HeatZoneManager } from './HeatZoneManager';
 import EventEmitter from 'events';
 
+
+type Street = [number, number][];
 interface Road {
   name: string;
   nodeIds: Set<string>;
-  coordinates: [number, number][];
+  streets: Street[];
 }
 
 export class RoadNetwork extends EventEmitter {
@@ -33,10 +35,6 @@ export class RoadNetwork extends EventEmitter {
     return Array.from(this.nodes.values());
   }
 
-  public getFeatures(): FeatureCollection {
-    return this.data;
-  }
-
   /**
    * Builds the network of nodes & edges; also reads the 'name' from feature properties.
    */
@@ -52,16 +50,12 @@ export class RoadNetwork extends EventEmitter {
           this.roads.set(streetName, {
             name: streetName,
             nodeIds: new Set<string>(),
-            coordinates: [],
+            streets: [],
           });
         }
         const road = this.roads.get(streetName)!;
 
-        // Add coordinates to road
-        for (const [lon, lat] of coords) {
-          road.coordinates.push([lat, lon]);
-        }
-
+        road.streets.push(coords as Street);
         // Build edges
         for (let i = 0; i < coords.length - 1; i++) {
           const [lon1, lat1] = coords[i];
@@ -268,7 +262,7 @@ export class RoadNetwork extends EventEmitter {
         results.push({
           name: road.name,
           nodeIds: Array.from(road.nodeIds),
-          coordinates: road.coordinates
+          coordinates: road.streets.flat()
         });
       }
     }
@@ -310,5 +304,9 @@ export class RoadNetwork extends EventEmitter {
 
   public isPositionInHeatZone(position: [number, number]): boolean {
     return this.heatZoneManager.isPositionInHeatZone(position);    
+  }
+  
+  public getFeatures(): FeatureCollection {
+    return this.data;
   }
 }
