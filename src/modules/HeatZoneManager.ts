@@ -46,14 +46,14 @@ export class HeatZoneManager {
         },
         geometry: {
           type: "Polygon",
-          coordinates: [vertices]
+          coordinates: vertices as [number, number][]
         }
       });
     }
 
     // Smooth polygons and convert to simpler HeatZone objects
     this.zones = this.smoothPolygons(heatZones).map(feature => ({
-      polygon: feature.geometry.coordinates[0],
+      polygon: feature.geometry.coordinates,
       intensity: feature.properties.intensity,
       timestamp: feature.properties.timestamp
     }));
@@ -61,6 +61,22 @@ export class HeatZoneManager {
 
   public exportHeatedZonesAsPaths(): string[] {
     return this.zones.map(zone => this.polygonToPath(zone.polygon));
+  }
+
+  public exportHeatedZonesAsFeatures(): HeatZoneFeature[] {
+    return this.zones.map(zone => ({
+      type: "Feature",
+      properties: {
+        id: crypto.randomUUID(),
+        intensity: zone.intensity,
+        timestamp: zone.timestamp,
+        radius: 0
+      },
+      geometry: {
+        type: "Polygon",
+        coordinates: zone.polygon as [number, number][]
+      }
+    }));
   }
 
   public isPositionInHeatZone(position: [number, number]): boolean {
@@ -99,13 +115,13 @@ export class HeatZoneManager {
 
   private smoothPolygons(zones: HeatZoneFeature[]): HeatZoneFeature[] {
     return zones.map(zone => {
-      const line = turf.lineString(zone.geometry.coordinates[0]);
+      const line = turf.lineString(zone.geometry.coordinates);
       const smoothed = turf.bezierSpline(line);
       return {
         ...zone,
         geometry: {
           type: "Polygon",
-          coordinates: [smoothed.geometry.coordinates]
+          coordinates: smoothed.geometry.coordinates as [number, number][]
         }
       };
     });

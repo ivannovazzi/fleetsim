@@ -1,7 +1,7 @@
 import fs from 'fs';
 import crypto from 'crypto';
 import { FeatureCollection, LineString } from 'geojson';
-import { Node, Edge, Route, PathNode } from '../types';
+import { Node, Edge, Route, PathNode, HeatZoneFeature } from '../types';
 import * as utils from '../utils/helpers';
 import { HeatZoneManager } from './HeatZoneManager';
 import EventEmitter from 'events';
@@ -288,8 +288,8 @@ export class RoadNetwork extends EventEmitter {
     this.emit('heatzones', this.exportHeatZones());
   }
 
-  public exportHeatZones(): string[] {
-    return this.heatZoneManager.exportHeatedZonesAsPaths();
+  public exportHeatZones(): HeatZoneFeature[] {
+    return this.heatZoneManager.exportHeatedZonesAsFeatures();
   }
 
   private getNetworkBounds(): [[number, number], [number, number]] {

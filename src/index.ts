@@ -38,8 +38,8 @@ app.post('/direction', async (req, res) => {
 });
 
 app.post('/node', async (req, res) => {
-  const { coordinates } = await network.findNearestNode([req.body.lat, req.body.lng]);    
-  res.json({ status: 'node', coordinates });
+  const { coordinates } = await network.findNearestNode([req.body[1], req.body[0]]);    
+  res.json({ status: 'node', coordinates: [coordinates[1], coordinates[0]] });
 });
 
 app.get('/options', (req, res) => {

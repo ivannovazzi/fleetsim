@@ -132,6 +132,6 @@ export interface HeatZoneFeature {
   };
   geometry: {
     type: "Polygon";
-    coordinates: number[][][];
+    coordinates: [number, number][];
   };
 }
