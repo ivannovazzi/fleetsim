@@ -42,7 +42,7 @@ export class RoadNetwork extends EventEmitter {
     data.features.forEach(feature => {
       if (feature.geometry.type === 'LineString') {
         const streetId = feature.properties?.id || crypto.randomUUID();
-        const streetName = feature.properties?.name || 'Unnamed Road';
+        const streetName = feature.properties?.name || "";
         const coords = (feature.geometry as LineString).coordinates;
 
         // Initialize or get existing road
