@@ -2,7 +2,11 @@ import { VehicleManager } from './VehicleManager';
 import { DirectionRequest, SimulationStatus, StartOptions } from '../types';
 import EventEmitter from 'events';
 
-export class SimulationController extends EventEmitter {
+type EventEmitterMap = {
+  updateStatus: [SimulationStatus];
+}
+
+export class SimulationController extends EventEmitter<EventEmitterMap> {
   constructor(private vehicleManager: VehicleManager) {
     super();
   }

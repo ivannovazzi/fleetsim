@@ -39,7 +39,12 @@ app.post('/direction', async (req, res) => {
 
 app.post('/node', async (req, res) => {
   const { coordinates } = await network.findNearestNode([req.body[1], req.body[0]]);    
-  res.json({ status: 'node', coordinates: [coordinates[1], coordinates[0]] });
+  res.json([coordinates[1], coordinates[0]]);
+});
+
+app.post('/find-road', async (req, res) => {
+  const road = await network.findNearestRoad([req.body[1], req.body[0]]);
+  res.json(road);
 });
 
 app.get('/options', (req, res) => {
@@ -90,19 +95,19 @@ const wss = new WebSocketServer({ port: 8080 });
 wss.on('connection', (ws) => {
   console.log('Client connected');
 
-  const heatzonesHandler = (heatzones: any) => {
+  const heatzonesHandler = <T>(heatzones: T) => {
     ws.send(JSON.stringify({ type: 'heatzones', data: heatzones }));
   }
-  const routeHandler = (route: any) => {
+  const routeHandler = <T>(route: T) => {
     ws.send(JSON.stringify({ type: 'route', data: route }));
   }
-  const optionsUpdateHandler = (options: any) => {
+  const optionsUpdateHandler = <T>(options: T) => {
     ws.send(JSON.stringify({ type: 'options', data: options }));
   }  
-  const vehicleUpdateHandler = (vehicle: any) => {
+  const vehicleUpdateHandler = <T>(vehicle: T) => {
     ws.send(JSON.stringify({ type: 'vehicle', data: vehicle }));
   };
-  const statusUpdateHandler = (data: any) => {
+  const statusUpdateHandler = <T>(data: T) => {
     ws.send(JSON.stringify({ type: 'status', data }));
   };
   

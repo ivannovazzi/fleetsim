@@ -143,6 +143,16 @@ export class RoadNetwork extends EventEmitter {
     return nearest;
   }
 
+  async findNearestRoad(position: [number, number]): Promise<Road> {
+    const node = this.findNearestNode(position);
+    for (const road of this.roads.values()) {
+      if (road.nodeIds.has(node.id)) {
+        return road;
+      }
+    }
+    throw new Error('Could not find road by node');
+  }
+
   /**
    * Returns edges connected at the end node of the provided edge, excluding any that lead back to the start node.
    */
