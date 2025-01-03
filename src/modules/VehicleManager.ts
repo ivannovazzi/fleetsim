@@ -6,6 +6,8 @@ import {
   VehicleRoute,
   StartOptions,
   VehicleStatus,
+  VehicleTrackingTypes,
+  MedicalType,
 } from "../types";
 import { RoadNetwork } from "./RoadNetwork";
 import { getVehicles, sendLocation } from "../utils/api";
@@ -41,8 +43,21 @@ export class VehicleManager extends EventEmitter {
   }
 
   private async init(): Promise<void> {
-    const vehiclesData = await getVehicles();
-    const medical = vehiclesData.filter(utils.isMedical);
+    // const vehicles = await getVehicles();
+
+    const oneOfEnum = <T>(values: T[]) => 
+      values[Math.floor(Math.random() * values.length)] as T;
+    
+    const vehicles = new Array(100).fill(0).map((_, i) => ({
+      id: i.toString(),
+      callsign: `V${i}`,
+      isOnline: Math.random() > 0.3,
+      _currentShift: Math.random() > 0.5 ? { id: Math.random().toString() } : null,
+      _trackingType: oneOfEnum(Object.values(VehicleTrackingTypes)),
+      vehicleTypeRef: { value: oneOfEnum(Object.values(MedicalType)) }
+    }));
+
+    const medical = vehicles.filter(utils.isMedical);
     const onShift = medical.filter(utils.isOnShift);
     const online = medical.filter(utils.isOnline);
     const offline = medical.filter(utils.isOffline);

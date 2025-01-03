@@ -1,14 +1,7 @@
-import { ApiVehicleModel, Route, VehicleStatus } from "../types";
+import { ApiVehicleModel, MedicalType, Route, VehicleStatus } from "../types";
 
 export function isMedical(vehicle: ApiVehicleModel) {
-  return [
-    "ALS",
-    "BLS",
-    "UNSUPPORTED",
-    "MEDICAL_TAXI",
-    "MEDICAL_MOTORBIKE",
-    "HEARSE",
-  "BOAT"].includes(vehicle.vehicleTypeRef.value);
+  return [...Object.values(MedicalType) as string[]].includes(vehicle.vehicleTypeRef.value);
 }
 
 export function isOnShift(vehicle: ApiVehicleModel) {
