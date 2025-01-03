@@ -89,8 +89,11 @@ app.get("/heatzones", (req, res) => {
 });
 
 
-// WebSocket server
-const wss = new WebSocketServer({ port: 8080 });
+const server = app.listen(config.port, () => {
+  console.log(`Server started on port ${config.port}`);
+});
+
+const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
   console.log('Client connected');
@@ -126,10 +129,4 @@ wss.on('connection', (ws) => {
     simulationController.removeListener('updateStatus', statusUpdateHandler);
     console.log('Client disconnected');
   });
-});
-
-// Start HTTP server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
 });

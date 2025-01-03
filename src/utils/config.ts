@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const config = {
+  port: Number(process.env.PORT) || 3000,
   token: process.env.TOKEN,
   apiUrl: process.env.API_URL,
   updateInterval: Number(process.env.UPDATE_INTERVAL) || 5000,
