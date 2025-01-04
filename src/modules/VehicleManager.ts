@@ -112,6 +112,7 @@ export class VehicleManager extends EventEmitter {
       this.emit("route", {
         vehicleId,
         route: utils.nonCircularRouteEdges(route),
+        eta: utils.estimateRouteDuration(route, vehicle.speed),
       });
     }
   }
@@ -388,6 +389,7 @@ export class VehicleManager extends EventEmitter {
     this.emit("route", {
       vehicleId,
       route: utils.nonCircularRouteEdges(route),
+      eta: utils.estimateRouteDuration(route, vehicle.speed),
     });
     this.routes.set(vehicleId, route);
     vehicle.currentEdge = route.edges[0];
