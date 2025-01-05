@@ -3,7 +3,7 @@ import {
   Edge,
   VehicleDTO,
   Route,
-  VehicleRoute,
+  Direction,
   StartOptions,
   VehicleStatus,
   VehicleTrackingTypes,
@@ -48,7 +48,7 @@ export class VehicleManager extends EventEmitter {
     const oneOfEnum = <T>(values: T[]) => 
       values[Math.floor(Math.random() * values.length)] as T;
     
-    const vehicles = new Array(100).fill(0).map((_, i) => ({
+    const vehicles = new Array(70).fill(0).map((_, i) => ({
       id: i.toString(),
       callsign: `V${i}`,
       isOnline: Math.random() > 0.3,
@@ -109,7 +109,7 @@ export class VehicleManager extends EventEmitter {
 
     if (route) {
       this.routes.set(vehicleId, route);
-      this.emit("route", {
+      this.emit("direction", {
         vehicleId,
         route: utils.nonCircularRouteEdges(route),
         eta: utils.estimateRouteDuration(route, vehicle.speed),
@@ -386,7 +386,7 @@ export class VehicleManager extends EventEmitter {
       return;
     }
 
-    this.emit("route", {
+    this.emit("direction", {
       vehicleId,
       route: utils.nonCircularRouteEdges(route),
       eta: utils.estimateRouteDuration(route, vehicle.speed),
@@ -400,10 +400,11 @@ export class VehicleManager extends EventEmitter {
     return Array.from(this.vehicles.values()).map(serializeVehicle);
   }
 
-  public getRoutes(): VehicleRoute[] {
+  public getDirections(): Direction[] {
     return Array.from(this.routes.entries()).map(([id, route]) => ({
       vehicleId: id,
       route: utils.nonCircularRouteEdges(route),
+      eta: utils.estimateRouteDuration(route, this.vehicles.get(id)!.speed),
     }));
   }
 

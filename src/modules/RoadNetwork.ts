@@ -287,8 +287,9 @@ export class RoadNetwork extends EventEmitter {
     minIntensity?: number;
     maxIntensity?: number;
   } = {}): void {
-    const bounds = this.getNetworkBounds();
-    this.heatZoneManager.generateHeatedZones(bounds, options);
+    const edges = Array.from(this.edges.values());
+    const nodes = Array.from(this.nodes.values());
+    this.heatZoneManager.generateHeatedZones(edges, nodes, options);
     this.emit('heatzones', this.exportHeatZones());
   }
 

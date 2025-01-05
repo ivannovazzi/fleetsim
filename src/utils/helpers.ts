@@ -83,6 +83,6 @@ export function nonCircularRouteEdges(route: Route): Route {
       };
     }
 
-export function estimateRouteDuration(route: Route, speed: number): number {
-  return route.edges.reduce((acc, edge) => acc + edge.distance / speed, 0);
+export function estimateRouteDuration(route: Route, speed: number = 1): number {
+  return route.edges.reduce((acc, edge) => acc + edge.distance / speed, 0) * 3600;
 }

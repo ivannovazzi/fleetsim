@@ -37,7 +37,7 @@ app.post('/direction', async (req, res) => {
   res.json({ status: 'direction' });
 });
 
-app.post('/node', async (req, res) => {
+app.post('/find-node', async (req, res) => {
   const { coordinates } = await network.findNearestNode([req.body[1], req.body[0]]);    
   res.json([coordinates[1], coordinates[0]]);
 });
@@ -64,8 +64,8 @@ app.get("/roads", (req, res) => {
   res.json(network.getAllRoads());
 });
 
-app.get("/routes", (req, res) => {
-  res.json(vehicleManager.getRoutes());
+app.get("/directions", (req, res) => {
+  res.json(vehicleManager.getDirections());
 });
 
 app.post("/search", async (req, res) => {
@@ -75,9 +75,9 @@ app.post("/search", async (req, res) => {
 
 app.post("/heatzones", (req, res) => {
   network.generateHeatedZones({
-    count: 16,
-    minRadius: 0.3,
-    maxRadius: 1,
+    count: 10,
+    minRadius: 0.2,
+    maxRadius: 0.5,
     minIntensity: 0.3,
     maxIntensity: 1
   });
@@ -101,8 +101,8 @@ wss.on('connection', (ws) => {
   const heatzonesHandler = <T>(heatzones: T) => {
     ws.send(JSON.stringify({ type: 'heatzones', data: heatzones }));
   }
-  const routeHandler = <T>(route: T) => {
-    ws.send(JSON.stringify({ type: 'route', data: route }));
+  const directionHandler = <T>(direction: T) => {
+    ws.send(JSON.stringify({ type: 'direction', data: direction }));
   }
   const optionsUpdateHandler = <T>(options: T) => {
     ws.send(JSON.stringify({ type: 'options', data: options }));
@@ -116,14 +116,14 @@ wss.on('connection', (ws) => {
   
   network.on('heatzones', heatzonesHandler);
   vehicleManager.on('update', vehicleUpdateHandler);
-  vehicleManager.on('route', routeHandler);
+  vehicleManager.on('direction', directionHandler);
   vehicleManager.on('options', optionsUpdateHandler);
   simulationController.on('updateStatus', statusUpdateHandler);
 
   ws.on('close', () => {
 
     network.removeListener('heatzones', heatzonesHandler);
-    vehicleManager.removeListener('route', routeHandler);
+    vehicleManager.removeListener('direction', directionHandler);
     vehicleManager.removeListener('update', vehicleUpdateHandler);
     vehicleManager.removeListener('options', optionsUpdateHandler);
     simulationController.removeListener('updateStatus', statusUpdateHandler);

@@ -116,7 +116,7 @@ export interface DirectionRequest {
   lng: number;
 }
 
-export interface VehicleRoute {
+export interface Direction {
   vehicleId: string;
   route: Route;
 }

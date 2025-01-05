@@ -1,6 +1,7 @@
 import * as turf from '@turf/turf';
+import intersect from '@turf/intersect';
 import crypto from 'crypto';
-import { HeatZone, HeatZoneFeature } from '../types';
+import { Edge, Node, HeatZone, HeatZoneFeature } from '../types';
 
 export class HeatZoneManager {
   private zones: HeatZone[] = [];
@@ -12,13 +13,15 @@ export class HeatZoneManager {
   }
 
   public generateHeatedZones(
-    bounds: [[number, number], [number, number]],
+    edges: Edge[],
+    nodes: Node[],
     options: {
       count?: number;
       minRadius?: number;
       maxRadius?: number;
       minIntensity?: number;
       maxIntensity?: number;
+      maxAttempts?: number;     // maximum tries if region overlaps
     } = {}
   ): void {
     const {
@@ -26,18 +29,32 @@ export class HeatZoneManager {
       minRadius = 0.5,
       maxRadius = 2,
       minIntensity = 0.3,
-      maxIntensity = 1
+      maxIntensity = 1,
+      maxAttempts = 10,
     } = options;
 
-    const heatZones: HeatZoneFeature[] = [];
-    for (let i = 0; i < count; i++) {
-      const center = this.getRandomPointInBounds(bounds);
-      const radius = minRadius + Math.random() * (maxRadius - minRadius);
+    const intersectionNodes = nodes.filter(n => n.connections.length >= 3);
+    const pool = intersectionNodes.length ? intersectionNodes : nodes;
+    const items = pool.map(n => ({
+      node: n,
+      weight: n.connections.length
+    }));
+    const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+
+    const newZones: HeatZoneFeature[] = [];
+    let attempts = 0;
+    while (newZones.length < count && attempts < count * maxAttempts) {
+      attempts++;
+      const picked = this.pickNodeByWeight(items, totalWeight);
+      const center: [number, number] = [picked.coordinates[0], picked.coordinates[1]];
+
+      const radiusScale = Math.max(1, picked.connections.length / 2);
+      const radius = (minRadius + Math.random() * (maxRadius - minRadius)) * radiusScale;
       const intensity = minIntensity + Math.random() * (maxIntensity - minIntensity);
+
       const vertices = this.generateIrregularPolygon(center, radius);
-      
-      heatZones.push({
-        type: "Feature",
+      const candidateZone: HeatZoneFeature = {
+        type: 'Feature',
         properties: {
           id: crypto.randomUUID(),
           intensity,
@@ -45,17 +62,18 @@ export class HeatZoneManager {
           radius
         },
         geometry: {
-          type: "Polygon",
+          type: 'Polygon',
           coordinates: vertices as [number, number][]
         }
-      });
+      };
+
+      newZones.push(candidateZone);
     }
 
-    // Smooth polygons and convert to simpler HeatZone objects
-    this.zones = this.smoothPolygons(heatZones).map(feature => ({
-      polygon: feature.geometry.coordinates,
-      intensity: feature.properties.intensity,
-      timestamp: feature.properties.timestamp
+    this.zones = this.smoothPolygons(newZones).map(zone => ({
+      polygon: zone.geometry.coordinates,
+      intensity: zone.properties.intensity,
+      timestamp: zone.properties.timestamp
     }));
   }
 
@@ -87,14 +105,7 @@ export class HeatZoneManager {
     });
   }
 
-  private getRandomPointInBounds(bounds: [[number, number], [number, number]]): [number, number] {
-    const [[minLat, minLon], [maxLat, maxLon]] = bounds;
-    return [
-      minLat + Math.random() * (maxLat - minLat),
-      minLon + Math.random() * (maxLon - minLon)
-    ];
-  }
-
+  
   private generateIrregularPolygon(center: [number, number], radius: number): number[][] {
     const points = 12;
     const vertices: number[][] = [];
@@ -156,4 +167,18 @@ export class HeatZoneManager {
     }
     return path;
   }
+
+  // Choose a node at random weighted by connections
+  private pickNodeByWeight(
+    items: Array<{ node: Node; weight: number }>,
+    totalWeight: number
+  ): Node {
+    let r = Math.random() * totalWeight;
+    for (const item of items) {
+      if (r < item.weight) return item.node;
+      r -= item.weight;
+    }
+    // Fallback
+    return items[items.length - 1].node;
+  }  
 }
