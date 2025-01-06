@@ -20,14 +20,16 @@ COPY export.geojson ./
 ENV NODE_ENV=production \
     UPDATE_INTERVAL=5000 \
     MIN_SPEED=20 \
-    MAX_SPEED=60 \
-    HEATZONE_SPEED_FACTOR=0.5 \
+    MAX_SPEED=120 \
+    HEATZONE_SPEED_FACTOR=0.2 \
     SPEED_VARIATION=0.2 \
     ACCELERATION=5 \
     DECELERATION=7 \
-    TURN_THRESHOLD=30 \    
-    DEFAULT_VEHICLES=10 \
+    TURN_THRESHOLD=30 \
     GEOJSON_PATH=/app/export.geojson \
-    API_URL=https://graphql-dev.flaredispatch.com/graphql
+    USE_ADAPTER=false \
+    ADAPTER_URL=http://localhost:3000 \
+    SYNC_ADAPTER=false \
+    SYNC_ADAPTER_TIMEOUT=5000
 
 CMD ["npm", "start"]

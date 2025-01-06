@@ -22,6 +22,11 @@ app.get('/status', (req, res) => {
   res.json(simulationController.getStatus());
 });
 
+app.post('/reset', (req, res) => {
+  simulationController.reset();
+  res.json({ status: 'reset' });
+});
+
 app.post('/start', async (req, res) => {
   await simulationController.start(req.body);
   res.json({ status: 'started' });

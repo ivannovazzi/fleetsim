@@ -1,31 +1,16 @@
-
-export enum MedicalType {
-  ALS = "ALS",
-  BLS = "BLS",
-  UNSUPPORTED = "UNSUPPORTED",
-  MEDICAL_TAXI = "MEDICAL_TAXI",
-  MEDICAL_MOTORBIKE = "MEDICAL_MOTORBIKE",
-  HEARSE = "HEARSE",
-  BOAT = "BOAT"
+export enum VehicleStatus {
+  ONSHIFT = "ONSHIFT",
+  ONLINE = "ONLINE",
+  OFFLINE = "OFFLINE",
+  UNTRACKED = "UNTRACKED",
+  UNKNOWN = "UNKNOWN",
 }
-
-
-export enum VehicleTrackingTypes {
-  FLARE_APP = 'FLARE_APP',
-  FLARE_APP_AND_GPS = 'FLARE_APP_AND_GPS',
-  FLARE_GPS = 'FLARE_GPS',
-  UNTRACKED = 'UNTRACKED'
-}
-
-export interface ApiVehicleModel {
+export interface DataVehicle {
   id: string;
-  callsign: string;
-  isOnline: boolean;
-  _currentShift: { id: string } | null;
-  _trackingType: VehicleTrackingTypes;
-  vehicleTypeRef: { value: string };
+  name: string;
+  status: VehicleStatus;
+  position: [number, number];
 }
-
 export interface Node {
   id: string;
   coordinates: [number, number];
@@ -61,13 +46,6 @@ export interface Vehicle {
   progress: number;
 }
 
-export enum VehicleStatus {
-  ONSHIFT = "ONSHIFT",
-  ONLINE = "ONLINE",
-  OFFLINE = "OFFLINE",
-  UNTRACKED = "UNTRACKED",
-  UNKNOWN = "UNKNOWN"
-}
 export interface VehicleDTO {
   id: string;
   name: string;
@@ -77,7 +55,6 @@ export interface VehicleDTO {
   speed: number;
   heading: number;
 }
-
 
 export interface SimulationStatus {
   interval: number;
@@ -105,10 +82,10 @@ export interface StartOptions {
   turnThreshold: number;
   heatZoneSpeedFactor: number;
   updateInterval: number;
-  updateServer: boolean;
-  updateServerTimeout: number;
+  useAdapter: boolean;
+  syncAdapter: boolean;
+  syncAdapterTimeout: number;
 }
-
 
 export interface DirectionRequest {
   id: string;
@@ -130,7 +107,7 @@ export interface HeatZoneProperties {
 
 export interface HeatZone {
   polygon: number[][];
-  intensity: number;  // 0-1 scale
+  intensity: number; // 0-1 scale
   timestamp: string;
 }
 

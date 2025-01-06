@@ -35,9 +35,6 @@ export class RoadNetwork extends EventEmitter {
     return Array.from(this.nodes.values());
   }
 
-  /**
-   * Builds the network of nodes & edges; also reads the 'name' from feature properties.
-   */
   private buildNetwork(data: FeatureCollection): void {
     data.features.forEach(feature => {
       if (feature.geometry.type === 'LineString') {
@@ -153,9 +150,6 @@ export class RoadNetwork extends EventEmitter {
     throw new Error('Could not find road by node');
   }
 
-  /**
-   * Returns edges connected at the end node of the provided edge, excluding any that lead back to the start node.
-   */
   public getConnectedEdges(edge: Edge): Edge[] {
     return edge.end.connections.filter(e => e.end.id !== edge.start.id);
   }
@@ -252,9 +246,6 @@ export class RoadNetwork extends EventEmitter {
     return lowest!;
   }
 
-  /**
-   * Allows searching edges by their 'name'. Returns an array of matching edges with IDs, names, and node details.
-   */
   public searchByName(query: string): Array<{
     name: string;
     nodeIds: string[];

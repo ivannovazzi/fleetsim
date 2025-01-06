@@ -6,15 +6,15 @@ import {
   Direction,
   StartOptions,
   VehicleStatus,
-  VehicleTrackingTypes,
-  MedicalType,
+  DataVehicle,
 } from "../types";
 import { RoadNetwork } from "./RoadNetwork";
-import { getVehicles, sendLocation } from "../utils/api";
 import { config } from "../utils/config";
 import { EventEmitter } from "events";
 import * as utils from "../utils/helpers";
+import * as data from "../utils/data";
 import { serializeVehicle } from "../utils/serializer";
+import Adapter from "./Adapter";
 
 export class VehicleManager extends EventEmitter {
   private vehicles: Map<string, Vehicle> = new Map();
@@ -23,6 +23,7 @@ export class VehicleManager extends EventEmitter {
   private vehicleIntervals: Map<string, NodeJS.Timeout> = new Map();
   private locationInterval: NodeJS.Timeout | null = null;
   private lastUpdateTimes: Map<string, number> = new Map();
+  private adapter = new Adapter();
 
   private options: StartOptions = {
     updateInterval: config.updateInterval,
@@ -33,40 +34,38 @@ export class VehicleManager extends EventEmitter {
     deceleration: config.deceleration,
     turnThreshold: config.turnThreshold,
     heatZoneSpeedFactor: config.heatZoneSpeedFactor,
-    updateServer: config.updateServer,
-    updateServerTimeout: config.updateServerTimeout,
+    useAdapter: config.useAdapter,
+    syncAdapter: config.syncAdapter,
+    syncAdapterTimeout: config.syncAdapterTimeout,
   };
 
   constructor(private network: RoadNetwork) {
     super();
-    this.init();
+    this.reset();
   }
 
   private async init(): Promise<void> {
-    // const vehicles = await getVehicles();
-
-    const oneOfEnum = <T>(values: T[]) => 
-      values[Math.floor(Math.random() * values.length)] as T;
-    
-    const vehicles = new Array(70).fill(0).map((_, i) => ({
-      id: i.toString(),
-      callsign: `V${i}`,
-      isOnline: Math.random() > 0.3,
-      _currentShift: Math.random() > 0.5 ? { id: Math.random().toString() } : null,
-      _trackingType: oneOfEnum(Object.values(VehicleTrackingTypes)),
-      vehicleTypeRef: { value: oneOfEnum(Object.values(MedicalType)) }
-    }));
-
-    const medical = vehicles.filter(utils.isMedical);
-    const onShift = medical.filter(utils.isOnShift);
-    const online = medical.filter(utils.isOnline);
-    const offline = medical.filter(utils.isOffline);
-    const untracked = medical.filter(utils.isUntracked);
-
-    const ordered = [...onShift, ...online, ...offline, ...untracked];
-    ordered.forEach((v) => {
-      this.addVehicle(v.id, v.callsign, utils.getStatus(v));
+    let vehicles: DataVehicle[] = [];
+    if (this.options.useAdapter) {
+      vehicles = await this.adapter.get();
+    } else {
+      vehicles = data.vehicles;
+    }
+    vehicles.forEach((v) => {
+      this.addVehicle(v.id, v.name, v.status);
     });
+  }
+
+  public reset(): void {
+    this.vehicles.clear();
+    this.visitedEdges.clear();
+    this.routes.clear();
+    this.vehicleIntervals.forEach((interval) => clearInterval(interval));
+    this.vehicleIntervals.clear();
+    this.locationInterval && clearInterval(this.locationInterval);
+    this.locationInterval = null;
+
+    this.init()
   }
 
   /**
@@ -141,16 +140,14 @@ export class VehicleManager extends EventEmitter {
       clearInterval(this.locationInterval);
     }
     this.locationInterval = setInterval(async () => {
-      if (!this.options.updateServer) return;
+      if (!this.options.useAdapter || !this.options.syncAdapter) return;
 
       const vehicles = Array.from(this.vehicles.values());
-      await sendLocation(
+      await this.adapter.sync(
         vehicles.map((v) => ({
           latitude: v.position[0],
           longitude: v.position[1],
-          id: v.id,
-          positionReceivedAt: new Date().toISOString(),
-          positionOriginRefId: "b13c099c-ab20-11ea-8f69-0673f8c18e22",
+          id: v.id,          
         }))
       );
     }, intervalMs);
@@ -411,4 +408,9 @@ export class VehicleManager extends EventEmitter {
   public isRunning(): boolean {
     return this.vehicleIntervals.size > 0;
   }
+
+  public getNetwork(): RoadNetwork {
+    return this.network;
+  }
+  
 }

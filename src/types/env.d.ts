@@ -1,8 +1,6 @@
 declare namespace NodeJS {
   interface ProcessEnv {
-    PORT: string;
-    TOKEN: string;
-    API_URL: string;
+    PORT: string;    
     MIN_SPEED: string;
     MAX_SPEED: string;
     SPEED_VARIATION: string;
@@ -10,9 +8,11 @@ declare namespace NodeJS {
     ACCELERATION: string;
     DECELERATION: string; 
     TURN_THRESHOLD: string;
-    UPDATE_INTERVAL: string;
-    UPDATE_SERVER: string;
-    UPDATE_SERVER_TIMEOUT: string;    
+    UPDATE_INTERVAL: string;        
     GEOJSON_PATH: string;
+    ADAPTER_URL: string;
+    USE_ADAPTER: string;
+    SYNC_ADAPTER: string;
+    SYNC_ADAPTER_TIMEOUT: string;    
   }
 }

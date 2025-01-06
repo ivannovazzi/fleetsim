@@ -26,9 +26,9 @@ export class HeatZoneManager {
   ): void {
     const {
       count = 5,
-      minRadius = 0.5,
-      maxRadius = 2,
-      minIntensity = 0.3,
+      minRadius = 0.1,
+      maxRadius = 1,
+      minIntensity = 0.2,
       maxIntensity = 1,
       maxAttempts = 10,
     } = options;

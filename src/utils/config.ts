@@ -4,8 +4,6 @@ dotenv.config();
 
 export const config = {
   port: Number(process.env.PORT) || 3000,
-  token: process.env.TOKEN,
-  apiUrl: process.env.API_URL,
   updateInterval: Number(process.env.UPDATE_INTERVAL) || 5000,
   minSpeed: Number(process.env.MIN_SPEED) || 20,
   maxSpeed: Number(process.env.MAX_SPEED) || 60,
@@ -14,18 +12,19 @@ export const config = {
   turnThreshold: Number(process.env.TURN_THRESHOLD) || 30,
   speedVariation: Number(process.env.SPEED_VARIATION) || 0.1,
   heatZoneSpeedFactor: Number(process.env.HEATZONE_SPEED_FACTOR) || 0.5,
-  updateServer: process.env.UPDATE_SERVER === 'true',
-  updateServerTimeout: Number(process.env.UPDATE_SERVER_TIMEOUT) || 5000,
-  geojsonPath: process.env.GEOJSON_PATH || "./export.geojson"
+  useAdapter: process.env.USE_ADAPTER === 'true' || false,
+  syncAdapter: process.env.SYNC_ADAPTER === 'true',
+  syncAdapterTimeout: Number(process.env.SYNC_ADAPTER_TIMEOUT) || 5000,
+  geojsonPath: process.env.GEOJSON_PATH || "./export.geojson",
+  adapterURL: process.env.ADAPTER_URL || 'http://localhost:3001',
 } as const;
 
 export function verifyConfig() {
-  if (!config.token) {
-    throw new Error('Missing required environment variable: TOKEN');
-  }
-
   if (!config.geojsonPath) {
     throw new Error('Missing required environment variable: GEOJSON_PATH');
   }  
+  if (config.syncAdapter && !process.env.ADAPTER_URL) {
+    throw new Error('Missing required environment variable: ADAPTER_URL');
+  }
 
 }

@@ -26,8 +26,7 @@ cp .env.example .env
 Required variables:
 
 ```bash
-API_URL=https://your-api-url/graphql
-TOKEN=your-auth-token
+ADAPTER_URL=http://your-adapter-url
 GEOJSON_PATH=./export.geojson
 ```
 
@@ -42,8 +41,8 @@ docker run -d fleetsim
 Override configuration:
 
 ```bash
-docker run -d 
-docker run -e UPDATE_INTERVAL=3000 -e MAX_SPEED=80 -e TOKEN fleetsim
+docker run -p 3000:3000 -d 
+docker run -e UPDATE_INTERVAL=5000 -e MAX_SPEED=80 -p 3000:3000 fleetsim
 ```
 
 Using docker-compose:
