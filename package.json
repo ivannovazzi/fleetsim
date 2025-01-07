@@ -13,14 +13,15 @@
     "ws": "^8.18.0"
   },
   "name": "fleetsim",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "NODE_ENV=production node ./dist/index.js --esm",
     "build": "tsc",
     "docker:build": "docker build -t FleetSim .",
-    "docker:run": "docker run -p 3000:3000 --env-file .env FleetSim"
+    "docker:run": "docker run -p 3000:3000 --env-file .env FleetSim",
+    "get:version": "node -p \"require('./package.json').version\""
   },
   "author": "",
   "license": "ISC",
