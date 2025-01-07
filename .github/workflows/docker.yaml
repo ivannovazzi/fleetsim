@@ -3,7 +3,7 @@ name: Build and Push Docker Image with Dynamic Version
 on:
   push:
     branches:
-      - main  # Trigger workflow on pushes to the `main` branch
+      - main
 
 jobs:
   build-and-push:
@@ -11,29 +11,20 @@ jobs:
 
     permissions:
       contents: read
-      packages: write  # Required to push to GHCR
+      packages: write
 
     steps:
-      # Step 1: Checkout the repository
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step 2: Install Node.js (to run npm scripts)
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '23' # Use a Node.js version compatible with your project
+          node-version: "23"
 
-      # Step 3: Install dependencies
       - name: Install dependencies
         run: npm install
 
-      # Step 4: Get the version from npm script
-      - name: Get Image Version
-        id: get_version
-        run: echo "VERSION=$(npm run get:version --silent)" >> $GITHUB_ENV
-
-      # Step 5: Log in to GitHub Container Registry
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -41,12 +32,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 6: Build the Docker image with the dynamic version tag
+      - name: Get Image Version
+        id: get_version
+        run: echo "VERSION=$(npm run get:version --silent)" >> $GITHUB_ENV
+
       - name: Build Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:$VERSION .
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/fleetsim
+          docker build -t $IMAGE_NAME:$VERSION .
 
-      # Step 7: Push the Docker image
       - name: Push Docker image
         run: |
-          docker push ghcr.io/${{ github.repository }}:$VERSION
+          IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/fleetsim
+          docker push $IMAGE_NAME:$VERSION
