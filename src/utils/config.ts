@@ -4,7 +4,7 @@ dotenv.config();
 
 export const config = {
   port: Number(process.env.PORT) || 3000,
-  updateInterval: Number(process.env.UPDATE_INTERVAL) || 5000,
+  updateInterval: Number(process.env.UPDATE_INTERVAL) || 500,
   minSpeed: Number(process.env.MIN_SPEED) || 20,
   maxSpeed: Number(process.env.MAX_SPEED) || 60,
   acceleration: Number(process.env.ACCELERATION) || 5,
@@ -22,9 +22,5 @@ export const config = {
 export function verifyConfig() {
   if (!config.geojsonPath) {
     throw new Error('Missing required environment variable: GEOJSON_PATH');
-  }  
-  if (config.syncAdapter && !process.env.ADAPTER_URL) {
-    throw new Error('Missing required environment variable: ADAPTER_URL');
   }
-
 }

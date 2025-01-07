@@ -41,7 +41,6 @@ docker run -d fleetsim
 Override configuration:
 
 ```bash
-docker run -p 3000:3000 -d 
 docker run -e UPDATE_INTERVAL=5000 -e MAX_SPEED=80 -p 3000:3000 fleetsim
 ```
 
@@ -61,17 +60,8 @@ docker-compose up
 | DECELERATION     | Speed decrease rate (km/h/update)       | 7       |
 | TURN_THRESHOLD   | Angle to trigger turn behavior (degrees)| 30      |
 
-
-
 ## Development
-
-Start in development mode:
 
 ```bash
 npm run dev
 ```
-
-
-
-
-

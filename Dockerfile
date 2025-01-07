@@ -18,7 +18,7 @@ COPY export.geojson ./
 
 # Default environment variables
 ENV NODE_ENV=production \
-    UPDATE_INTERVAL=5000 \
+    UPDATE_INTERVAL=500 \
     MIN_SPEED=20 \
     MAX_SPEED=120 \
     HEATZONE_SPEED_FACTOR=0.2 \
@@ -28,7 +28,7 @@ ENV NODE_ENV=production \
     TURN_THRESHOLD=30 \
     GEOJSON_PATH=/app/export.geojson \
     USE_ADAPTER=false \
-    ADAPTER_URL=http://localhost:3000 \
+    ADAPTER_URL=http://localhost:3001 \
     SYNC_ADAPTER=false \
     SYNC_ADAPTER_TIMEOUT=5000
 

@@ -3,8 +3,15 @@ import { config } from "../utils/config";
 
 export default class Adapter {
 
-  private request(path: string, options: RequestInit) {
-    return fetch(`${config.adapterURL}${path}`, options).then((res) => res.json());
+  private async request(path: string, options: RequestInit) {
+    try {
+      const response = await fetch(`${config.adapterURL}${path}`, options);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`Error from adapter: ${error}`);
+      return
+    }
   }
 
   public get(): Promise<DataVehicle[]> {
