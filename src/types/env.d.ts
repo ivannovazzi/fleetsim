@@ -13,6 +13,6 @@ declare namespace NodeJS {
     ADAPTER_URL: string;
     USE_ADAPTER: string;
     SYNC_ADAPTER: string;
-    SYNC_ADAPTER_TIMEOUT: string;    
+    SYNC_ADAPTER_TIMEOUT: string;
   }
 }

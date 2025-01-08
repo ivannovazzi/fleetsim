@@ -16,7 +16,7 @@ export const config = {
   syncAdapter: process.env.SYNC_ADAPTER === 'true',
   syncAdapterTimeout: Number(process.env.SYNC_ADAPTER_TIMEOUT) || 5000,
   geojsonPath: process.env.GEOJSON_PATH || "./export.geojson",
-  adapterURL: process.env.ADAPTER_URL || 'http://localhost:3001',
+  adapterURL: process.env.ADAPTER_URL || '',
 } as const;
 
 export function verifyConfig() {

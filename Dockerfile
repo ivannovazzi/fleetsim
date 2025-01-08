@@ -28,7 +28,7 @@ ENV NODE_ENV=production \
     TURN_THRESHOLD=30 \
     GEOJSON_PATH=/app/export.geojson \
     USE_ADAPTER=false \
-    ADAPTER_URL=http://localhost:3001 \
+    # ADAPTER_URL=http://localhost:3001 \
     SYNC_ADAPTER=false \
     SYNC_ADAPTER_TIMEOUT=5000
 

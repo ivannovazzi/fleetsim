@@ -37,6 +37,7 @@ export class VehicleManager extends EventEmitter {
     useAdapter: config.useAdapter,
     syncAdapter: config.syncAdapter,
     syncAdapterTimeout: config.syncAdapterTimeout,
+    editAdapter: config.adapterURL !== "",
   };
 
   constructor(private network: RoadNetwork) {

@@ -82,6 +82,7 @@ export interface StartOptions {
   turnThreshold: number;
   heatZoneSpeedFactor: number;
   updateInterval: number;
+  editAdapter: boolean;
   useAdapter: boolean;
   syncAdapter: boolean;
   syncAdapterTimeout: number;
