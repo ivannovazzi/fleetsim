@@ -7,6 +7,12 @@ on:
     types: [closed]
     branches: [main]
 
+permissions:
+  contents: write
+  pull-requests: write  
+  id-token: write
+
+
 jobs:
   build-every-commit:
     name: Build on every commit
