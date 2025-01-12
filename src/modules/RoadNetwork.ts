@@ -1,7 +1,7 @@
 import fs from 'fs';
 import crypto from 'crypto';
 import { Feature, FeatureCollection, LineString } from 'geojson';
-import { Node, Edge, Route, PathNode, HeatZoneFeature } from '../types';
+import { Node, Edge, Route, PathNode, HeatZoneFeature, POI } from '../types';
 import * as utils from '../utils/helpers';
 import { HeatZoneManager } from './HeatZoneManager';
 import EventEmitter from 'events';
@@ -29,6 +29,42 @@ export class RoadNetwork extends EventEmitter {
 
   public getAllRoads(): Road[] {
     return Array.from(this.roads.values());
+  }
+
+  private getPoiType(feature: Feature): string | null {
+    if (feature.properties?.shop) {
+      return "shop";
+    }
+    if (feature.properties?.leisure) {
+      return "leisure";
+    }
+    if (feature.properties?.craft) {
+      return "craft";
+    }
+    if (feature.properties?.office) {
+      return "office";
+    }
+    return null;
+  }
+  public getAllPOIs(): Array<POI> {
+    const poi: Array<POI> = [];
+  
+    for (const feature of this.data.features) {
+      if (feature.geometry.type === 'Point') {
+        const type = this.getPoiType(feature);
+        if (type === null) {
+          continue;
+        }
+        const [lon, lat] = feature.geometry.coordinates as [number, number];
+        poi.push({
+          type: type,
+          name: feature.properties?.name || null,
+          coordinates: [lat, lon]
+        });
+      }
+    }
+  
+    return poi.filter(p => p.type !== 'Unknown');
   }
 
   private getAllNodes(): Node[] {
