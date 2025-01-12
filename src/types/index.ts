@@ -69,6 +69,7 @@ export interface PathNode {
 }
 
 export interface POI {
+  id: string;
   name: string | null;
   coordinates: [number, number];
   type: string;

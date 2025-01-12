@@ -1,19 +1,16 @@
 name: Release and Build Docker Image
 
 on:
-  # Release-please opens or updates a PR; we'll only finalize on merge
+  push:
+    branches: ['*']
   pull_request:
     types: [closed]
     branches: [main]
-  # (Optional) if you still want to run release-please checks on pushes:
-  push:
-    branches: [main]
 
 jobs:
-  release:
-    name: Run Release Please
+  build-every-commit:
+    name: Build on every commit
     runs-on: ubuntu-latest
-    # This job runs on push or pull_request events, generating the release PR before merge.
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -21,14 +18,31 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "16"
+          node-version: "23"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+  release:
+    name: Run Release Please
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "23"
 
       - name: Release Please
         id: release
         uses: googleapis/release-please-action@v3
         with:
           release-type: node
-          # Adjust settings as needed
           bump-minor-pre-major: true
           package-name: "fleetsim"
 
@@ -52,7 +66,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: "16"
+          node-version: "23"
 
       - name: Install dependencies
         run: npm install
@@ -67,7 +81,6 @@ jobs:
       - name: Build Docker image
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/fleetsim
-          # Optionally, use the new version from the release-please output:
           VERSION=$(node -p "require('./package.json').version")
           echo "Docker version: $VERSION"
           docker build -t $IMAGE_NAME:$VERSION .
