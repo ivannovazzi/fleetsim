@@ -1,12 +1,58 @@
-name: Build and Push Docker Image with Dynamic Version
+name: Release and Build Docker Image
 
 on:
   push:
-    branches:
-      - main
+    branches: ['*']
+  pull_request:
+    types: [closed]
+    branches: [main]
 
 jobs:
-  build-and-push:
+  build-every-commit:
+    name: Build on every commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "23"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+  release:
+    name: Run Release Please
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "23"
+
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v3
+        with:
+          release-type: node
+          bump-minor-pre-major: true
+          package-name: "fleetsim"
+
+  build-and-push-docker:
+    name: Build and Push Docker image
+    needs: release
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.title, 'chore(main): release')
     runs-on: ubuntu-latest
 
     permissions:
@@ -32,16 +78,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Get Image Version
-        id: get_version
-        run: echo "VERSION=$(npm run get:version --silent)" >> $GITHUB_ENV
-
       - name: Build Docker image
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/fleetsim
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Docker version: $VERSION"
           docker build -t $IMAGE_NAME:$VERSION .
 
       - name: Push Docker image
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository_owner }}/fleetsim
+          VERSION=$(node -p "require('./package.json').version")
           docker push $IMAGE_NAME:$VERSION

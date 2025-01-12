@@ -69,6 +69,10 @@ app.get("/roads", (req, res) => {
   res.json(network.getAllRoads());
 });
 
+app.get("/pois", (req, res) => {
+  res.json(network.getAllPOIs());
+});
+
 app.get("/directions", (req, res) => {
   res.json(vehicleManager.getDirections());
 });

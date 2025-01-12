@@ -68,6 +68,13 @@ export interface PathNode {
   fScore: number;
 }
 
+export interface POI {
+  id: string;
+  name: string | null;
+  coordinates: [number, number];
+  type: string;
+}
+
 export interface Route {
   edges: Edge[];
   distance: number;

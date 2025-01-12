@@ -1,11 +1,10 @@
-import fs from 'fs';
-import crypto from 'crypto';
-import { Feature, FeatureCollection, LineString } from 'geojson';
-import { Node, Edge, Route, PathNode, HeatZoneFeature } from '../types';
-import * as utils from '../utils/helpers';
-import { HeatZoneManager } from './HeatZoneManager';
-import EventEmitter from 'events';
-
+import fs from "fs";
+import crypto from "crypto";
+import { Feature, FeatureCollection, LineString } from "geojson";
+import { Node, Edge, Route, PathNode, HeatZoneFeature, POI } from "../types";
+import * as utils from "../utils/helpers";
+import { HeatZoneManager } from "./HeatZoneManager";
+import EventEmitter from "events";
 
 type Street = [number, number][];
 interface Road {
@@ -23,12 +22,51 @@ export class RoadNetwork extends EventEmitter {
 
   constructor(geojsonPath: string) {
     super();
-    this.data = JSON.parse(fs.readFileSync(geojsonPath, 'utf8')) as FeatureCollection;
-    this.buildNetwork(this.data);    
+    this.data = JSON.parse(
+      fs.readFileSync(geojsonPath, "utf8")
+    ) as FeatureCollection;
+    this.buildNetwork(this.data);
   }
 
   public getAllRoads(): Road[] {
     return Array.from(this.roads.values());
+  }
+
+  private getPoiType(feature: Feature): string | null {
+    if (feature.properties?.shop) {
+      return "shop";
+    }
+    if (feature.properties?.leisure) {
+      return "leisure";
+    }
+    if (feature.properties?.craft) {
+      return "craft";
+    }
+    if (feature.properties?.office) {
+      return "office";
+    }
+    return null;
+  }
+  public getAllPOIs(): Array<POI> {
+    const poi: Array<POI> = [];
+
+    for (const feature of this.data.features) {
+      if (feature.geometry.type === "Point") {
+        const type = this.getPoiType(feature);
+        if (type === null) {
+          continue;
+        }
+        const [lon, lat] = feature.geometry.coordinates as [number, number];
+        poi.push({
+          id: feature.properties?.id || crypto.randomUUID(),
+          type: type,
+          name: feature.properties?.name || null,
+          coordinates: [lat, lon],
+        });
+      }
+    }
+
+    return poi.filter((p) => p.type !== "Unknown");
   }
 
   private getAllNodes(): Node[] {
@@ -36,8 +74,8 @@ export class RoadNetwork extends EventEmitter {
   }
 
   private buildNetwork(data: FeatureCollection): void {
-    data.features.forEach(feature => {
-      if (feature.geometry.type === 'LineString') {
+    data.features.forEach((feature) => {
+      if (feature.geometry.type === "LineString") {
         const streetId = feature.properties?.id || crypto.randomUUID();
         const streetName = feature.properties?.name || "";
         const coords = (feature.geometry as LineString).coordinates;
@@ -64,9 +102,15 @@ export class RoadNetwork extends EventEmitter {
           road.nodeIds.add(node1.id);
           road.nodeIds.add(node2.id);
 
-          const distance = utils.calculateDistance(node1.coordinates, node2.coordinates);
-          const bearing = utils.calculateBearing(node1.coordinates, node2.coordinates);
-          
+          const distance = utils.calculateDistance(
+            node1.coordinates,
+            node2.coordinates
+          );
+          const bearing = utils.calculateBearing(
+            node1.coordinates,
+            node2.coordinates
+          );
+
           const forwardEdge: Edge = {
             id: `${node1.id}-${node2.id}`,
             streetId,
@@ -74,9 +118,9 @@ export class RoadNetwork extends EventEmitter {
             end: node2,
             distance,
             bearing,
-            name: streetName
+            name: streetName,
           };
-          
+
           const reverseEdge: Edge = {
             id: `${node2.id}-${node1.id}`,
             streetId,
@@ -84,14 +128,14 @@ export class RoadNetwork extends EventEmitter {
             end: node1,
             distance,
             bearing: (bearing + 180) % 360,
-            name: streetName
+            name: streetName,
           };
-          
+
           this.edges.set(forwardEdge.id, forwardEdge);
           this.edges.set(reverseEdge.id, reverseEdge);
-          
+
           node1.connections.push(forwardEdge);
-          node2.connections.push(reverseEdge);          
+          node2.connections.push(reverseEdge);
         }
       }
     });
@@ -102,7 +146,7 @@ export class RoadNetwork extends EventEmitter {
       this.nodes.set(id, {
         id,
         coordinates,
-        connections: []
+        connections: [],
       });
     }
     return this.nodes.get(id)!;
@@ -124,7 +168,7 @@ export class RoadNetwork extends EventEmitter {
 
     const nodes = this.getAllNodes();
     if (nodes.length === 0) {
-      throw new Error('Network has no nodes');
+      throw new Error("Network has no nodes");
     }
 
     for (const node of nodes) {
@@ -135,7 +179,7 @@ export class RoadNetwork extends EventEmitter {
       }
     }
     if (!nearest) {
-      throw new Error('Could not find nearest node');
+      throw new Error("Could not find nearest node");
     }
     return nearest;
   }
@@ -147,34 +191,34 @@ export class RoadNetwork extends EventEmitter {
         return road;
       }
     }
-    throw new Error('Could not find road by node');
+    throw new Error("Could not find road by node");
   }
 
   public getConnectedEdges(edge: Edge): Edge[] {
-    return edge.end.connections.filter(e => e.end.id !== edge.start.id);
+    return edge.end.connections.filter((e) => e.end.id !== edge.start.id);
   }
-  
+
   public findRoute(start: Node, end: Node): Route | null {
     const openSet = new Map<string, PathNode>();
     const closedSet = new Set<string>();
-    const cameFrom = new Map<string, {prevId: string; edge: Edge}>();
-    
+    const cameFrom = new Map<string, { prevId: string; edge: Edge }>();
+
     const gScore = new Map<string, number>();
     const fScore = new Map<string, number>();
-    
+
     gScore.set(start.id, 0);
     const initialH = this.calculateHeuristic(start, end);
     fScore.set(start.id, initialH);
-    
+
     openSet.set(start.id, {
       id: start.id,
       gScore: 0,
-      fScore: initialH
+      fScore: initialH,
     });
 
     while (openSet.size > 0) {
       const current = this.getLowestFScore(openSet);
-      
+
       if (current.id === end.id) {
         return this.reconstructPath(start.id, end.id, cameFrom);
       }
@@ -183,18 +227,18 @@ export class RoadNetwork extends EventEmitter {
       closedSet.add(current.id);
 
       const currentNode = this.nodes.get(current.id)!;
-      
+
       for (const edge of currentNode.connections) {
         if (closedSet.has(edge.end.id)) continue;
 
-        const currentCost = gScore.get(current.id)!;        
+        const currentCost = gScore.get(current.id)!;
         const tentativeCost = currentCost + edge.distance;
         const existingCost = gScore.get(edge.end.id);
-        
+
         if (!existingCost || tentativeCost < existingCost) {
           cameFrom.set(edge.end.id, { prevId: current.id, edge });
           gScore.set(edge.end.id, tentativeCost);
-          
+
           const h = this.calculateHeuristic(edge.end, end);
           const f = tentativeCost + h;
           fScore.set(edge.end.id, f);
@@ -202,7 +246,7 @@ export class RoadNetwork extends EventEmitter {
           openSet.set(edge.end.id, {
             id: edge.end.id,
             gScore: tentativeCost,
-            fScore: f
+            fScore: f,
           });
         }
       }
@@ -213,7 +257,7 @@ export class RoadNetwork extends EventEmitter {
   private reconstructPath(
     startId: string,
     endId: string,
-    cameFrom: Map<string, {prevId: string; edge: Edge}>
+    cameFrom: Map<string, { prevId: string; edge: Edge }>
   ): Route {
     const path: Edge[] = [];
     let currentId = endId;
@@ -228,7 +272,7 @@ export class RoadNetwork extends EventEmitter {
 
     return {
       edges: path,
-      distance: totalDistance
+      distance: totalDistance,
     };
   }
 
@@ -263,7 +307,7 @@ export class RoadNetwork extends EventEmitter {
         results.push({
           name: road.name,
           nodeIds: Array.from(road.nodeIds),
-          coordinates: road.streets.flat()
+          coordinates: road.streets.flat(),
         });
       }
     }
@@ -271,17 +315,19 @@ export class RoadNetwork extends EventEmitter {
     return results;
   }
 
-  public generateHeatedZones(options: {
-    count?: number;
-    minRadius?: number;
-    maxRadius?: number;
-    minIntensity?: number;
-    maxIntensity?: number;
-  } = {}): void {
+  public generateHeatedZones(
+    options: {
+      count?: number;
+      minRadius?: number;
+      maxRadius?: number;
+      minIntensity?: number;
+      maxIntensity?: number;
+    } = {}
+  ): void {
     const edges = Array.from(this.edges.values());
     const nodes = Array.from(this.nodes.values());
     this.heatZoneManager.generateHeatedZones(edges, nodes, options);
-    this.emit('heatzones', this.exportHeatZones());
+    this.emit("heatzones", this.exportHeatZones());
   }
 
   public exportHeatZones(): HeatZoneFeature[] {
@@ -290,10 +336,12 @@ export class RoadNetwork extends EventEmitter {
 
   private getNetworkBounds(): [[number, number], [number, number]] {
     const nodes = this.getAllNodes();
-    let minLat = Infinity, maxLat = -Infinity;
-    let minLon = Infinity, maxLon = -Infinity;
+    let minLat = Infinity,
+      maxLat = -Infinity;
+    let minLon = Infinity,
+      maxLon = -Infinity;
 
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
       const [lat, lon] = node.coordinates;
       minLat = Math.min(minLat, lat);
       maxLat = Math.max(maxLat, lat);
@@ -301,14 +349,23 @@ export class RoadNetwork extends EventEmitter {
       maxLon = Math.max(maxLon, lon);
     });
 
-    return [[minLat, minLon], [maxLat, maxLon]];
+    return [
+      [minLat, minLon],
+      [maxLat, maxLon],
+    ];
   }
 
   public isPositionInHeatZone(position: [number, number]): boolean {
-    return this.heatZoneManager.isPositionInHeatZone(position);    
+    return this.heatZoneManager.isPositionInHeatZone(position);
   }
-  
+
   public getFeatures(): FeatureCollection {
-    return this.data;
+    return {
+      ...this.data,
+      // remove the points of interest
+      features: this.data.features.filter(
+        (feature) => feature.geometry.type === "LineString"
+      ),
+    };
   }
 }
