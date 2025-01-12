@@ -9,9 +9,7 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write  
-  id-token: write
-
+  pull-requests: write
 
 jobs:
   build-every-commit:
@@ -51,6 +49,7 @@ jobs:
           release-type: node
           bump-minor-pre-major: true
           package-name: "fleetsim"
+          token: ${{ secrets.MY_RELEASE_PLEASE_TOKEN }}
 
   build-and-push-docker:
     name: Build and Push Docker image
