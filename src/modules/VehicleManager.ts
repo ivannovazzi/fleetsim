@@ -53,7 +53,6 @@ export class VehicleManager extends EventEmitter {
     } else {
       vehicles = data.vehicles;
     }
-    console.log(vehicles);
     vehicles.forEach((v) => {
       this.addVehicle(v.id, v.name, v.status);
     });
