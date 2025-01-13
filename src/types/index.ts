@@ -59,7 +59,6 @@ export interface VehicleDTO {
 export interface SimulationStatus {
   interval: number;
   running: boolean;
-  vehicles: VehicleDTO[];
 }
 
 export interface PathNode {

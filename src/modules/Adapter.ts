@@ -1,5 +1,6 @@
 import { DataVehicle } from "../types";
 import { config } from "../utils/config";
+import logger from "../utils/logger";
 
 export default class Adapter {
 
@@ -9,7 +10,7 @@ export default class Adapter {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error(`Error from adapter: ${error}`);
+      logger.error(`Error from adapter: ${error}`);
       return
     }
   }
