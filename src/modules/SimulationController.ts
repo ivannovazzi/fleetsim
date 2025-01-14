@@ -39,9 +39,9 @@ export class SimulationController extends EventEmitter<EventEmitterMap> {
       this.vehicleManager.startVehicleMovement(v.id, intervalMs);
     }
 
-    // Start location updates if enabled
     if (this.vehicleManager.getOptions().syncAdapter) {
-      this.vehicleManager.startLocationUpdates(intervalMs);
+      const syncAdapterTimeout = this.vehicleManager.getOptions().syncAdapterTimeout;
+      this.vehicleManager.startLocationUpdates(syncAdapterTimeout);
     }
 
     // Automatically regenerate heat zones every 5 minutes

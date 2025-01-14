@@ -149,7 +149,7 @@ export class VehicleManager extends EventEmitter {
         vehicles.map((v) => ({
           latitude: v.position[0],
           longitude: v.position[1],
-          id: v.id,          
+          id: v.id,
         }))
       );
     }, intervalMs);
