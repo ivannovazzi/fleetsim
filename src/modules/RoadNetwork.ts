@@ -45,6 +45,9 @@ export class RoadNetwork extends EventEmitter {
     if (feature.properties?.office) {
       return "office";
     }
+    if (feature.properties?.highway === "bus_stop") {
+      return "bus_stop";
+    }
     return null;
   }
   public getAllPOIs(): Array<POI> {
