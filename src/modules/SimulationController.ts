@@ -17,6 +17,7 @@ export class SimulationController extends EventEmitter<EventEmitterMap> {
     return {
       interval: this.vehicleManager.getOptions().updateInterval,
       running: this.vehicleManager.isRunning(),      
+      adapterTimeout: this.vehicleManager.getOptions().syncAdapterTimeout,
     };
   }
 

@@ -59,6 +59,7 @@ export interface VehicleDTO {
 export interface SimulationStatus {
   interval: number;
   running: boolean;
+  adapterTimeout: number;
 }
 
 export interface PathNode {
