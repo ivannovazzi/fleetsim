@@ -15,6 +15,7 @@ import * as utils from "../utils/helpers";
 import * as data from "../utils/data";
 import { serializeVehicle } from "../utils/serializer";
 import Adapter from "./Adapter";
+import logger from "../utils/logger";
 
 export class VehicleManager extends EventEmitter {
   private vehicles: Map<string, Vehicle> = new Map();
@@ -42,7 +43,7 @@ export class VehicleManager extends EventEmitter {
 
   constructor(private network: RoadNetwork) {
     super();
-    this.reset();
+    this.init();
   }
 
   private async init(): Promise<void> {
@@ -57,7 +58,7 @@ export class VehicleManager extends EventEmitter {
     });
   }
 
-  public reset(): void {
+  public async reset(): Promise<void> {
     this.vehicles.clear();
     this.visitedEdges.clear();
     this.routes.clear();
@@ -66,7 +67,7 @@ export class VehicleManager extends EventEmitter {
     this.locationInterval && clearInterval(this.locationInterval);
     this.locationInterval = null;
 
-    this.init()
+    await this.init()
   }
 
   /**
@@ -148,7 +149,7 @@ export class VehicleManager extends EventEmitter {
         vehicles.map((v) => ({
           latitude: v.position[0],
           longitude: v.position[1],
-          id: v.id,          
+          id: v.id,
         }))
       );
     }, intervalMs);
@@ -374,13 +375,13 @@ export class VehicleManager extends EventEmitter {
       startNode.connections.length === 0 ||
       endNode.connections.length === 0
     ) {
-      console.error("Start/end node has no connections");
+      logger.error("Start/end node has no connections");
       return;
     }
 
     const route = this.network.findRoute(startNode, endNode);
     if (!route) {
-      console.error("No route found to destination");
+      logger.error("No route found to destination");
       return;
     }
 

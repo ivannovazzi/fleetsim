@@ -1,5 +1,5 @@
 import { VehicleManager } from './VehicleManager';
-import { DirectionRequest, SimulationStatus, StartOptions } from '../types';
+import { DirectionRequest, SimulationStatus, StartOptions, VehicleDTO } from '../types';
 import EventEmitter from 'events';
 
 type EventEmitterMap = {
@@ -16,8 +16,8 @@ export class SimulationController extends EventEmitter<EventEmitterMap> {
   getStatus(): SimulationStatus {
     return {
       interval: this.vehicleManager.getOptions().updateInterval,
-      running: this.vehicleManager.isRunning(),
-      vehicles: this.vehicleManager.getVehicles()
+      running: this.vehicleManager.isRunning(),      
+      adapterTimeout: this.vehicleManager.getOptions().syncAdapterTimeout,
     };
   }
 
@@ -40,9 +40,9 @@ export class SimulationController extends EventEmitter<EventEmitterMap> {
       this.vehicleManager.startVehicleMovement(v.id, intervalMs);
     }
 
-    // Start location updates if enabled
     if (this.vehicleManager.getOptions().syncAdapter) {
-      this.vehicleManager.startLocationUpdates(intervalMs);
+      const syncAdapterTimeout = this.vehicleManager.getOptions().syncAdapterTimeout;
+      this.vehicleManager.startLocationUpdates(syncAdapterTimeout);
     }
 
     // Automatically regenerate heat zones every 5 minutes
@@ -71,16 +71,30 @@ export class SimulationController extends EventEmitter<EventEmitterMap> {
     }
     // Stop location updates
     this.vehicleManager.stopLocationUpdates();
-
     this.emit('updateStatus', this.getStatus());
   }
 
   async setOptions(options: StartOptions): Promise<void> {
+    if (this.vehicleManager.getOptions().useAdapter !== options.useAdapter) {
+      this.stop();
+      this.vehicleManager.reset();
+    }
     await this.vehicleManager.setOptions(options);
     this.emit('updateStatus', this.getStatus());
   }
 
   async getOptions(): Promise<StartOptions> {
     return this.vehicleManager.getOptions();
+  }
+
+  async setUseAdapter(useAdapter: boolean): Promise<void> {    
+    this.stop();
+    await this.vehicleManager.setOptions({ useAdapter });
+    await this.vehicleManager.reset();
+    this.emit('updateStatus', this.getStatus());    
+  }
+
+  async getVehicles(): Promise<VehicleDTO[]> {
+    return this.vehicleManager.getVehicles();
   }
 }

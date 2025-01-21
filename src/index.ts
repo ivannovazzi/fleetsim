@@ -6,6 +6,7 @@ import { VehicleManager } from './modules/VehicleManager';
 import { SimulationController } from './modules/SimulationController';
 import { config, verifyConfig } from './utils/config';
 import bodyParser from 'body-parser';
+import logger from './utils/logger';
 
 verifyConfig();
 
@@ -61,6 +62,16 @@ app.post('/options', async (req, res) => {
   res.json({ status: 'options set' });
 });
 
+app.post('/adapter', async (req, res) => {
+  await simulationController.setUseAdapter(req.body.useAdapter);
+  res.json({ status: 'adapter set' });
+});
+
+app.get('/vehicles', async (req, res) => {
+  const vehicles = await vehicleManager.getVehicles();
+  res.json(vehicles);
+});
+
 app.get("/network", (req, res) => {
   res.json(network.getFeatures());
 });
@@ -99,13 +110,13 @@ app.get("/heatzones", (req, res) => {
 
 
 const server = app.listen(config.port, () => {
-  console.log(`Server started on port ${config.port}`);
+  logger.info(`Server started on port ${config.port}`);
 });
 
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
-  console.log('Client connected');
+  logger.info('Client connected');
 
   const heatzonesHandler = <T>(heatzones: T) => {
     ws.send(JSON.stringify({ type: 'heatzones', data: heatzones }));
@@ -136,6 +147,6 @@ wss.on('connection', (ws) => {
     vehicleManager.removeListener('update', vehicleUpdateHandler);
     vehicleManager.removeListener('options', optionsUpdateHandler);
     simulationController.removeListener('updateStatus', statusUpdateHandler);
-    console.log('Client disconnected');
+    logger.info('Client disconnected');
   });
 });
