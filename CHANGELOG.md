@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/ivannovazzi/fleetsim/compare/v1.0.0...v1.0.1) (2025-01-21)
+
+
+### Bug Fixes
+
+* use adapter, sync, new endpoints ([#3](https://github.com/ivannovazzi/fleetsim/issues/3)) ([a5426cd](https://github.com/ivannovazzi/fleetsim/commit/a5426cdb0e587eb553be5d7e7a6d44f58c05dcae))
+
 ## 1.0.0 (2025-01-12)
 
 
